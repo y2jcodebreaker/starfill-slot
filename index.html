@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>STARFILL — Lucky Spin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400;1,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* =============================================
+       VARIABLES & RESET
+    ============================================= */
+    :root {
+      --bg:        #07050e;
+      --surface:   #0f0c1c;
+      --frame:     #1a1630;
+      --frame-b:   #2a2448;
+      --gold:      #c9943a;
+      --gold-lt:   #e8b84a;
+      --gold-dk:   #6a4c18;
+      --rose:      #a84868;
+      --cream:     #f2ece0;
+      --cream-70:  rgba(242,236,224,0.7);
+      --cream-40:  rgba(242,236,224,0.4);
+      --cream-20:  rgba(242,236,224,0.2);
+      --plus-col:  #d4a53a;
+      --deep-col:  #b060c0;
+      --imp-col:   #38c0d8;
+      --win-col:   #4ade80;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%; width: 100%;
+      overflow-x: hidden;
+      background: var(--bg);
+      color: var(--cream);
+      font-family: 'Cormorant Garamond', serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .hidden { display: none !important; }
+
+    /* =============================================
+       SCREEN TRANSITIONS
+    ============================================= */
+    .screen {
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 28px 16px;
+    }
+
+    /* =============================================
+       REGISTRATION SCREEN
+    ============================================= */
+    #screen-register {
+      background:
+        radial-gradient(ellipse at 50% -10%, rgba(201,148,58,0.18) 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 90%, rgba(168,72,104,0.1) 0%, transparent 45%),
+        var(--bg);
+      text-align: center;
+    }
+
+    .reg-logo {
+      width: 88px; height: 88px;
+      border-radius: 50%;
+      border: 1.5px solid var(--gold);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 22px;
+      font-size: 36px;
+      background: radial-gradient(circle at 40% 40%, rgba(201,148,58,0.15), rgba(201,148,58,0.04));
+      box-shadow: 0 0 40px rgba(201,148,58,0.2), inset 0 0 24px rgba(201,148,58,0.06);
+      position: relative;
+    }
+    .reg-logo::after {
+      content: '';
+      position: absolute; inset: -6px;
+      border-radius: 50%;
+      border: 1px solid rgba(201,148,58,0.2);
+    }
+
+    .reg-brand {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: clamp(20px, 6.5vw, 32px);
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      color: var(--gold-lt);
+      text-shadow: 0 0 40px rgba(201,148,58,0.4);
+      line-height: 1.1;
+    }
+    .reg-brand-sub {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: clamp(11px, 3vw, 14px);
+      font-weight: 400;
+      letter-spacing: 0.3em;
+      color: var(--cream-40);
+      margin-top: 6px;
+      margin-bottom: 28px;
+      text-transform: uppercase;
+    }
+
+    .reg-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 18px;
+      border-radius: 100px;
+      border: 1px solid rgba(201,148,58,0.35);
+      background: rgba(201,148,58,0.08);
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 30px;
+    }
+
+    .reg-form {
+      width: 100%; max-width: 360px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .reg-form input {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(201,148,58,0.22);
+      border-radius: 14px;
+      padding: 16px 20px;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 18px;
+      color: var(--cream);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .reg-form input::placeholder { color: var(--cream-20); }
+    .reg-form input:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(201,148,58,0.12);
+    }
+
+    .btn-start {
+      width: 100%; padding: 17px;
+      background: linear-gradient(135deg, #c9943a 0%, #e8b84a 50%, #c9943a 100%);
+      background-size: 200% auto;
+      border: none; border-radius: 14px;
+      font-family: 'Cinzel Decorative', serif;
+      font-size: 13px; font-weight: 700;
+      letter-spacing: 0.18em;
+      color: #07050e;
+      cursor: pointer;
+      box-shadow: 0 4px 24px rgba(201,148,58,0.35);
+      transition: background-position 0.5s, transform 0.15s, box-shadow 0.2s;
+      margin-top: 4px;
+    }
+    .btn-start:hover {
+      background-position: right center;
+      box-shadow: 0 6px 32px rgba(201,148,58,0.5);
+      transform: translateY(-1px);
+    }
+    .btn-start:active { transform: translateY(0); }
+
+    .reg-note {
+      margin-top: 22px;
+      font-size: 13px; font-style: italic;
+      color: var(--cream-40); max-width: 280px;
+      line-height: 1.6;
+    }
+
+    /* =============================================
+       MACHINE SCREEN
+    ============================================= */
+    #screen-machine {
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(201,148,58,0.1) 0%, transparent 50%),
+        var(--bg);
+      justify-content: flex-start;
+      padding-top: 20px;
+    }
+
+    .user-bar {
+      width: 100%; max-width: 390px;
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px; padding: 0 4px;
+    }
+    .user-greeting {
+      font-size: 15px; font-style: italic; color: var(--cream-40);
+    }
+    .user-greeting strong { font-style: normal; color: var(--cream-70); font-weight: 600; }
+
+    .spin-dots { display: flex; align-items: center; gap: 7px; }
+    .sdot {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--gold);
+      box-shadow: 0 0 6px rgba(201,148,58,0.6);
+      transition: all 0.3s;
+    }
+    .sdot.used { background: transparent; border: 1.5px solid var(--gold-dk); box-shadow: none; }
+
+    /* Machine wrapper */
+    .machine {
+      width: 100%; max-width: 390px;
+      position: relative;
+    }
+
+    /* Top panel */
+    .m-top {
+      background: linear-gradient(180deg, #1e1a34 0%, #160f2a 100%);
+      border: 1px solid var(--frame-b); border-bottom: none;
+      border-radius: 22px 22px 0 0;
+      padding: 14px 20px 12px;
+      text-align: center; position: relative; overflow: hidden;
+    }
+    .m-top::before {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        repeating-linear-gradient(90deg, transparent 0, transparent 28px, rgba(201,148,58,0.025) 28px, rgba(201,148,58,0.025) 29px),
+        repeating-linear-gradient(0deg,  transparent 0, transparent 28px, rgba(201,148,58,0.025) 28px, rgba(201,148,58,0.025) 29px);
+    }
+    .m-top-deco {
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+      margin-bottom: 8px; position: relative; z-index: 1;
+    }
+    .m-top-line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(201,148,58,0.4)); }
+    .m-top-line:last-child { background: linear-gradient(90deg, rgba(201,148,58,0.4), transparent); }
+    .m-top-diamond { color: var(--gold); font-size: 10px; }
+    .m-title {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: clamp(11px, 3.8vw, 17px);
+      font-weight: 900;
+      letter-spacing: 0.22em;
+      color: var(--gold-lt);
+      text-shadow: 0 0 24px rgba(201,148,58,0.5);
+      position: relative; z-index: 1;
+    }
+    .m-subtitle {
+      font-size: 11px; font-style: italic; color: var(--cream-20);
+      letter-spacing: 0.15em; margin-top: 4px; position: relative; z-index: 1;
+    }
+
+    /* Blinking lights strip */
+    .lights {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 16px;
+      background: #0e0b1a;
+      border-left: 1px solid var(--frame-b); border-right: 1px solid var(--frame-b);
+    }
+    .lt {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--gold);
+      box-shadow: 0 0 5px var(--gold);
+      animation: ltblink 1.8s ease-in-out infinite;
+    }
+    .lt:nth-child(2n)   { background: var(--rose); box-shadow: 0 0 5px var(--rose); animation-delay: 0.3s; }
+    .lt:nth-child(3n)   { animation-delay: 0.6s; }
+    .lt:nth-child(4n)   { animation-delay: 0.9s; }
+    .lt:nth-child(5n)   { animation-delay: 1.2s; }
+    @keyframes ltblink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.25; }
+    }
+
+    /* Reels area */
+    .reels-area {
+      background: #0a0818;
+      border-left: 1px solid var(--frame-b); border-right: 1px solid var(--frame-b);
+      padding: 18px 14px 14px;
+      position: relative;
+    }
+
+    /* Payline indicator */
+    .payline {
+      position: absolute; left: 0; right: 0;
+      top: calc(50% + 9px); transform: translateY(-50%);
+      height: 2px;
+      background: linear-gradient(90deg, transparent 0%, rgba(201,148,58,0.5) 20%, var(--gold) 50%, rgba(201,148,58,0.5) 80%, transparent 100%);
+      pointer-events: none; z-index: 20;
+    }
+    .payline-marker {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      color: var(--gold); font-size: 10px;
+      filter: drop-shadow(0 0 4px var(--gold));
+    }
+    .payline-marker.left  { left: 6px; }
+    .payline-marker.right { right: 6px; }
+
+    .reels-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+
+    /* Individual reel */
+    .reel {
+      height: 240px;
+      border-radius: 12px;
+      border: 1px solid rgba(201,148,58,0.18);
+      background: #060410;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Gradient masks top + bottom */
+    .reel::before, .reel::after {
+      content: ''; position: absolute;
+      left: 0; right: 0; z-index: 10; pointer-events: none;
+    }
+    .reel::before {
+      top: 0; height: 33%;
+      background: linear-gradient(to bottom, #060410 0%, transparent 100%);
+    }
+    .reel::after {
+      bottom: 0; height: 33%;
+      background: linear-gradient(to top, #060410 0%, transparent 100%);
+    }
+
+    /* Scrolling strip */
+    .reel-strip {
+      display: flex; flex-direction: column;
+      transition: transform 0s;
+    }
+    .reel-strip.spinning {
+      transition: transform var(--spin-dur, 2s) cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    /* Each symbol card in the strip */
+    .sym {
+      height: 80px; flex-shrink: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 5px; padding: 6px;
+      text-align: center; user-select: none;
+    }
+    .sym-star { font-size: 12px; letter-spacing: 3px; }
+    .sym-l1 {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: 7.5px; font-weight: 700; letter-spacing: 0.1em;
+    }
+    .sym-l2 {
+      font-family: 'DM Mono', monospace;
+      font-size: 8.5px; font-weight: 500; letter-spacing: 0.04em;
+    }
+    .sym.s-plus    { color: var(--plus-col);  background: linear-gradient(160deg, #160e00, #1e1400); }
+    .sym.s-deep    { color: var(--deep-col);  background: linear-gradient(160deg, #120818, #1a0c24); }
+    .sym.s-implant { color: var(--imp-col);   background: linear-gradient(160deg, #04101a, #061828); }
+
+    /* Win flash on reel */
+    @keyframes reelWinFlash {
+      0%, 100% { border-color: rgba(201,148,58,0.18); }
+      25%  { border-color: var(--gold); box-shadow: inset 0 0 30px rgba(201,148,58,0.25), 0 0 20px rgba(201,148,58,0.4); }
+      75%  { border-color: var(--gold); box-shadow: inset 0 0 30px rgba(201,148,58,0.25), 0 0 20px rgba(201,148,58,0.4); }
+    }
+    .reel.win-flash { animation: reelWinFlash 0.8s ease-in-out 3; }
+
+    /* Machine controls bottom panel */
+    .m-controls {
+      background: linear-gradient(180deg, #160f2a 0%, #1e1834 100%);
+      border: 1px solid var(--frame-b); border-top: none;
+      border-radius: 0 0 22px 22px;
+      padding: 20px 20px 26px;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 14px;
+    }
+
+    /* SPIN button */
+    .btn-spin {
+      width: 156px; height: 156px;
+      border-radius: 50%; border: none; cursor: pointer;
+      background: radial-gradient(circle at 38% 32%, #f0c050 0%, #c9943a 45%, #7a5010 100%);
+      box-shadow:
+        0 0 0 5px #160f2a,
+        0 0 0 7px rgba(201,148,58,0.28),
+        0 10px 36px rgba(0,0,0,0.7),
+        inset 0 2px 5px rgba(255,255,255,0.22),
+        inset 0 -3px 8px rgba(0,0,0,0.3);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 3px;
+      transition: transform 0.15s, box-shadow 0.15s;
+      position: relative;
+    }
+    .btn-spin::after {
+      content: '';
+      position: absolute;
+      top: 8px; left: 8px; right: 8px; bottom: 8px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.12);
+      pointer-events: none;
+    }
+    .btn-spin:hover:not(:disabled) {
+      transform: scale(1.05);
+      box-shadow:
+        0 0 0 5px #160f2a,
+        0 0 0 7px rgba(201,148,58,0.45),
+        0 0 50px rgba(201,148,58,0.3),
+        0 12px 44px rgba(0,0,0,0.7),
+        inset 0 2px 5px rgba(255,255,255,0.22),
+        inset 0 -3px 8px rgba(0,0,0,0.3);
+    }
+    .btn-spin:active:not(:disabled) { transform: scale(0.96); }
+    .btn-spin:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-spin-label {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: 17px; font-weight: 900;
+      color: #06040c;
+      letter-spacing: 0.18em;
+      text-shadow: 0 1px 0 rgba(255,255,255,0.28);
+    }
+    .btn-spin-sub {
+      font-family: 'DM Mono', monospace;
+      font-size: 8px; color: rgba(6,4,12,0.55);
+      letter-spacing: 0.2em;
+    }
+
+    /* Machine shake on spin */
+    @keyframes mShake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-3px) rotate(-0.3deg); }
+      40% { transform: translateX(3px)  rotate(0.3deg); }
+      60% { transform: translateX(-2px); }
+      80% { transform: translateX(2px); }
+    }
+    .machine.shaking { animation: mShake 0.35s ease-out; }
+
+    /* =============================================
+       RESULT OVERLAY
+    ============================================= */
+    #overlay {
+      position: fixed; inset: 0; z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+      background: rgba(7,5,14,0.9);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    .res-card {
+      width: 100%; max-width: 360px;
+      background: linear-gradient(150deg, #1a1630, #0f0c20);
+      border: 1px solid rgba(201,148,58,0.25);
+      border-radius: 26px;
+      padding: 38px 28px;
+      text-align: center;
+      position: relative; overflow: hidden;
+      box-shadow: 0 24px 70px rgba(0,0,0,0.75);
+      animation: cardIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    @keyframes cardIn {
+      from { opacity: 0; transform: scale(0.85) translateY(20px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .res-card.win {
+      border-color: var(--gold);
+      animation: cardIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both, winPulse 2.5s ease-in-out 0.5s infinite;
+    }
+    @keyframes winPulse {
+      0%, 100% { box-shadow: 0 24px 70px rgba(0,0,0,0.75); }
+      50%       { box-shadow: 0 24px 70px rgba(0,0,0,0.75), 0 0 50px rgba(201,148,58,0.25); }
+    }
+
+    .res-icon { font-size: 58px; display: block; margin-bottom: 14px; line-height: 1; }
+    .res-title {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: clamp(16px, 5vw, 24px);
+      font-weight: 900; margin-bottom: 8px;
+    }
+    .res-title.win  { color: var(--gold-lt); text-shadow: 0 0 24px rgba(201,148,58,0.5); }
+    .res-title.lose { color: var(--cream); }
+    .res-desc {
+      font-size: 16px; font-style: italic;
+      color: var(--cream-40); margin-bottom: 22px; line-height: 1.5;
+    }
+
+    /* Reels result chips */
+    .res-reels {
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+      margin-bottom: 22px;
+      flex-wrap: wrap;
+    }
+    .res-chip {
+      padding: 4px 10px; border-radius: 100px;
+      font-family: 'DM Mono', monospace; font-size: 10px;
+      letter-spacing: 0.05em;
+    }
+    .res-chip.s-plus    { background: rgba(201,148,58,0.15); color: var(--plus-col); border: 1px solid rgba(201,148,58,0.3); }
+    .res-chip.s-deep    { background: rgba(176,96,192,0.15); color: var(--deep-col); border: 1px solid rgba(176,96,192,0.3); }
+    .res-chip.s-implant { background: rgba(56,192,216,0.15); color: var(--imp-col);  border: 1px solid rgba(56,192,216,0.3); }
+
+    /* Discount box */
+    .discount-box {
+      background: rgba(201,148,58,0.07);
+      border: 1px dashed rgba(201,148,58,0.45);
+      border-radius: 14px; padding: 18px 20px; margin-bottom: 18px;
+    }
+    .disc-label {
+      font-family: 'DM Mono', monospace; font-size: 10px;
+      color: var(--gold); letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 10px;
+    }
+    .disc-pct {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: 40px; font-weight: 900;
+      color: var(--gold-lt); line-height: 1;
+    }
+    .disc-off { font-size: 14px; color: var(--cream-40); margin-top: 4px; }
+    .disc-code {
+      font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500;
+      color: var(--cream);
+      background: rgba(255,255,255,0.07); border-radius: 8px;
+      padding: 10px 16px; margin-top: 14px;
+      letter-spacing: 0.14em; cursor: pointer;
+      transition: background 0.2s; user-select: all;
+    }
+    .disc-code:hover { background: rgba(255,255,255,0.12); }
+    .disc-hint { font-size: 11px; color: var(--cream-20); margin-top: 6px; font-style: italic; }
+
+    .btn-whatsapp {
+      width: 100%;
+      background: linear-gradient(135deg, #25D366, #128C7E);
+      border: none; border-radius: 12px; padding: 14px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      font-family: 'Cinzel Decorative', serif;
+      font-size: 11px; letter-spacing: 0.12em; color: white;
+      cursor: pointer; margin-bottom: 8px;
+      transition: opacity 0.2s;
+    }
+    .btn-whatsapp:hover { opacity: 0.88; }
+
+    .btn-again, .btn-done {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px; padding: 13px;
+      font-family: 'Cinzel Decorative', serif;
+      font-size: 10px; letter-spacing: 0.16em;
+      color: var(--cream-40); cursor: pointer;
+      transition: background 0.2s, color 0.2s; margin-bottom: 6px;
+    }
+    .btn-again:hover, .btn-done:hover { background: rgba(255,255,255,0.09); color: var(--cream); }
+
+    .spins-left-note {
+      font-family: 'DM Mono', monospace; font-size: 11px;
+      color: var(--cream-20); letter-spacing: 0.08em;
+    }
+
+    /* =============================================
+       CONFETTI CANVAS
+    ============================================= */
+    #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 199; }
+
+    /* =============================================
+       ADMIN PANEL
+    ============================================= */
+    #admin-panel {
+      min-height: 100dvh; background: var(--bg);
+      padding: 28px 20px;
+      font-family: 'Cormorant Garamond', serif;
+    }
+    .adm-hdr {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 28px; flex-wrap: wrap; gap: 12px;
+      border-bottom: 1px solid var(--frame-b); padding-bottom: 18px;
+    }
+    .adm-title {
+      font-family: 'Cinzel Decorative', serif;
+      font-size: 18px; color: var(--gold);
+    }
+    .adm-subtitle { font-size: 14px; font-style: italic; color: var(--cream-40); margin-top: 3px; }
+    .adm-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .adm-btn {
+      padding: 8px 16px; border-radius: 8px; cursor: pointer;
+      font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.04em;
+      transition: background 0.2s;
+    }
+    .adm-btn.export { background: rgba(201,148,58,0.1); border: 1px solid rgba(201,148,58,0.35); color: var(--gold); }
+    .adm-btn.export:hover { background: rgba(201,148,58,0.18); }
+    .adm-btn.clear  { background: rgba(220,60,60,0.08); border: 1px solid rgba(220,60,60,0.3); color: #f88; }
+    .adm-btn.clear:hover { background: rgba(220,60,60,0.15); }
+
+    .adm-stats {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 10px; margin-bottom: 24px;
+    }
+    .adm-stat {
+      background: var(--surface); border: 1px solid var(--frame-b);
+      border-radius: 12px; padding: 14px; text-align: center;
+    }
+    .adm-stat-n { font-family: 'Cinzel Decorative', serif; font-size: 26px; color: var(--gold-lt); }
+    .adm-stat-l { font-size: 12px; font-style: italic; color: var(--cream-40); margin-top: 3px; }
+
+    .adm-table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--frame-b); }
+    .adm-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 680px; }
+    .adm-table thead { background: var(--surface); }
+    .adm-table th {
+      padding: 11px 14px; text-align: left;
+      font-family: 'DM Mono', monospace; font-size: 10px;
+      color: var(--gold); letter-spacing: 0.12em; text-transform: uppercase;
+      border-bottom: 1px solid var(--frame-b);
+    }
+    .adm-table td {
+      padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 14px; vertical-align: middle;
+    }
+    .adm-table tr:last-child td { border-bottom: none; }
+    .adm-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .badge-win  { display:inline-flex; align-items:center; gap:4px; background:rgba(74,222,128,0.12); color:#4ade80; border:1px solid rgba(74,222,128,0.3); border-radius:100px; padding:2px 10px; font-size:10px; font-family:'DM Mono',monospace; }
+    .badge-lose { color:var(--cream-20); font-size:11px; font-family:'DM Mono',monospace; }
+    .code-val   { font-family:'DM Mono',monospace; font-size:12px; color:var(--gold); letter-spacing:0.05em; }
+    .adm-empty  { text-align:center; padding:40px; font-style:italic; color:var(--cream-40); font-size:16px; }
+
+    /* =============================================
+       RESPONSIVE
+    ============================================= */
+    @media (max-width: 380px) {
+      .btn-spin { width: 138px; height: 138px; }
+      .btn-spin-label { font-size: 15px; }
+      .reel { height: 210px; }
+      .sym  { height: 70px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- =============================================
+     CONFETTI CANVAS
+============================================= -->
+<canvas id="confetti"></canvas>
+
+<!-- =============================================
+     SCREEN 1 — REGISTRATION
+============================================= -->
+<div id="screen-register" class="screen">
+  <div class="reg-logo">✦</div>
+
+  <div class="reg-brand">STARFILL</div>
+  <div class="reg-brand-sub">Aesthetics · Lucky Spin</div>
+
+  <div class="reg-pill">◆ &nbsp; 3 Free Spins · Win Exclusive Discounts &nbsp; ◆</div>
+
+  <form class="reg-form" id="reg-form" autocomplete="off">
+    <input type="text" id="inp-name" placeholder="Your Name" required autocomplete="off">
+    <input type="tel"  id="inp-phone" placeholder="Phone Number" required autocomplete="off">
+    <button type="submit" class="btn-start">START SPINNING</button>
+  </form>
+
+  <p class="reg-note">By spinning you agree to receive your exclusive discount code via this game. No spam.</p>
+</div>
+
+<!-- =============================================
+     SCREEN 2 — MACHINE
+============================================= -->
+<div id="screen-machine" class="screen hidden">
+  <div class="user-bar">
+    <div class="user-greeting">Welcome, <strong id="lbl-name">—</strong></div>
+    <div class="spin-dots" id="spin-dots">
+      <div class="sdot"></div>
+      <div class="sdot"></div>
+      <div class="sdot"></div>
+    </div>
+  </div>
+
+  <div class="machine" id="machine">
+    <!-- Top panel -->
+    <div class="m-top">
+      <div class="m-top-deco">
+        <div class="m-top-line"></div>
+        <span class="m-top-diamond">◆</span>
+        <div class="m-top-line"></div>
+      </div>
+      <div class="m-title">LUCKY SPIN</div>
+      <div class="m-subtitle">Match all three · Win a discount</div>
+    </div>
+
+    <!-- Lights strip -->
+    <div class="lights">
+      <div class="lt"></div><div class="lt"></div><div class="lt"></div>
+      <div class="lt"></div><div class="lt"></div><div class="lt"></div>
+      <div class="lt"></div><div class="lt"></div><div class="lt"></div>
+      <div class="lt"></div><div class="lt"></div><div class="lt"></div>
+      <div class="lt"></div><div class="lt"></div><div class="lt"></div>
+    </div>
+
+    <!-- Reels -->
+    <div class="reels-area">
+      <div class="payline">
+        <span class="payline-marker left">◆</span>
+        <span class="payline-marker right">◆</span>
+      </div>
+      <div class="reels-row">
+        <div class="reel" id="reel-0"><div class="reel-strip" id="strip-0"></div></div>
+        <div class="reel" id="reel-1"><div class="reel-strip" id="strip-1"></div></div>
+        <div class="reel" id="reel-2"><div class="reel-strip" id="strip-2"></div></div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="m-controls">
+      <button class="btn-spin" id="btn-spin">
+        <span class="btn-spin-label">SPIN</span>
+        <span class="btn-spin-sub">TAP TO PLAY</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- =============================================
+     RESULT OVERLAY
+============================================= -->
+<div id="overlay" class="hidden">
+  <div class="res-card" id="res-card">
+    <span class="res-icon" id="res-icon">🎰</span>
+    <div class="res-title" id="res-title">—</div>
+    <div class="res-desc"  id="res-desc">—</div>
+    <div class="res-reels" id="res-reels"></div>
+
+    <div id="discount-box" class="discount-box hidden">
+      <div class="disc-label">Your Exclusive Discount</div>
+      <div class="disc-pct" id="disc-pct">—%</div>
+      <div class="disc-off">OFF on your next treatment</div>
+      <div class="disc-code" id="disc-code" title="Tap to copy">—</div>
+      <div class="disc-hint">Tap code to copy · Show this to our team</div>
+    </div>
+
+    <button class="btn-whatsapp hidden" id="btn-share">
+      <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      Share on WhatsApp
+    </button>
+    <button class="btn-again" id="btn-again">SPIN AGAIN</button>
+    <div class="spins-left-note" id="spins-left-note"></div>
+  </div>
+</div>
+
+<!-- =============================================
+     ADMIN PANEL
+============================================= -->
+<div id="admin-panel" class="hidden">
+  <div class="adm-hdr">
+    <div>
+      <div class="adm-title">STARFILL — Admin Dashboard</div>
+      <div class="adm-subtitle">All spin results across all users</div>
+    </div>
+    <div class="adm-actions">
+      <button class="adm-btn export" onclick="exportCSV()">⬇ Export CSV</button>
+      <button class="adm-btn clear"  onclick="clearAll()">✕ Clear All</button>
+    </div>
+  </div>
+
+  <div class="adm-stats" id="adm-stats"></div>
+
+  <div class="adm-table-wrap">
+    <table class="adm-table" id="adm-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Date / Time</th>
+          <th>Name</th>
+          <th>Phone</th>
+          <th>Reel 1</th>
+          <th>Reel 2</th>
+          <th>Reel 3</th>
+          <th>Result</th>
+          <th>Discount Code</th>
+        </tr>
+      </thead>
+      <tbody id="adm-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- =============================================
+     JAVASCRIPT
+============================================= -->
+<script>
+// ─────────────────────────────────────────────
+// CONFIG — edit these to customise the game
+// ─────────────────────────────────────────────
+const CFG = {
+  ADMIN_KEY:    'starfill2026',   // URL param: ?admin=starfill2026
+  MAX_SPINS:    3,                // spins per session
+  WEBHOOK_URL:  '',               // optional: paste Google Apps Script URL here
+  WHATSAPP_NUM: '919999999999',   // your WhatsApp number for prize claim
+};
+
+// ─────────────────────────────────────────────
+// SYMBOLS
+// ─────────────────────────────────────────────
+const SYMBOLS = [
+  {
+    id: 'plus', cls: 's-plus',
+    star: '★', l1: 'STARFILL', l2: 'PLUS',
+    label: 'STARFILL PLUS',
+    weight: 5, discount: 10, prefix: 'SF-PLUS',
+    color: '#d4a53a',
+  },
+  {
+    id: 'deep', cls: 's-deep',
+    star: '★★', l1: 'STARFILL', l2: 'DEEP+',
+    label: 'STARFILL DEEP PLUS',
+    weight: 3, discount: 20, prefix: 'SF-DEEP',
+    color: '#b060c0',
+  },
+  {
+    id: 'implant', cls: 's-implant',
+    star: '★★★', l1: 'STARFILL', l2: 'IMPLANT+',
+    label: 'STARFILL IMPLANT PLUS',
+    weight: 2, discount: 30, prefix: 'SFI-VIP',
+    color: '#38c0d8',
+  },
+];
+
+// Total weight pool
+const TOTAL_W = SYMBOLS.reduce((s, x) => s + x.weight, 0);
+
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let userName  = '';
+let userPhone = '';
+let spinsLeft = CFG.MAX_SPINS;
+let spinning  = false;
+let lastResult = null; // {reels, won, code}
+
+// ─────────────────────────────────────────────
+// UTILITIES
+// ─────────────────────────────────────────────
+function weightedRandom() {
+  let r = Math.random() * TOTAL_W;
+  for (const s of SYMBOLS) { r -= s.weight; if (r <= 0) return s; }
+  return SYMBOLS[0];
+}
+
+function randCode(prefix) {
+  return prefix + '-' + Math.floor(1000 + Math.random() * 9000);
+}
+
+function symCard(s) {
+  return `<div class="sym ${s.cls}">
+    <div class="sym-star">${s.star}</div>
+    <div class="sym-l1">${s.l1}</div>
+    <div class="sym-l2">${s.l2}</div>
+  </div>`;
+}
+
+// Build a strip of N * all-symbols + extra tail
+const STRIP_REPEATS = 30; // how many full loops in the strip
+function buildStrip(reelIdx) {
+  const strip = document.getElementById('strip-' + reelIdx);
+  let html = '';
+  for (let i = 0; i < STRIP_REPEATS; i++) {
+    for (const s of SYMBOLS) html += symCard(s);
+  }
+  strip.innerHTML = html;
+  // Start positioned at middle of strip to allow scrolling in both directions
+  const itemH = getItemH();
+  const totalH = itemH * SYMBOLS.length * STRIP_REPEATS;
+  // Park near bottom-middle so we can only scroll down
+  const initPos = Math.floor(STRIP_REPEATS / 2) * SYMBOLS.length * itemH;
+  strip.style.transform = `translateY(-${initPos}px)`;
+  strip.dataset.pos = initPos;
+}
+
+function getItemH() {
+  return window.innerWidth <= 380 ? 70 : 80;
+}
+
+function getReelH() {
+  return window.innerWidth <= 380 ? 210 : 240;
+}
+
+// ─────────────────────────────────────────────
+// SPIN ANIMATION
+// Each reel scrolls to show the target symbol in the center
+// Center of reel = reelH / 2 = 120px from top
+// Center of item at index i in strip = (initPos + scroll) * -1
+// ─────────────────────────────────────────────
+function spinReel(reelIdx, targetSymbol, duration, callback) {
+  const strip = document.getElementById('strip-' + reelIdx);
+  const itemH = getItemH();
+  const reelH = getReelH();
+  const currentPos = parseFloat(strip.dataset.pos || 0);
+
+  // Find next occurrence of targetSymbol well ahead in strip
+  const symIdx = SYMBOLS.findIndex(s => s.id === targetSymbol.id);
+  // We want several full rotations before landing
+  const extraRotations = 8 + reelIdx * 3; // more rotations for later reels
+  const extraItems = extraRotations * SYMBOLS.length + symIdx;
+  const newPos = currentPos + extraItems * itemH;
+
+  // The center of the target item should be at reelH/2 from the top of the reel
+  // translateY = -(newPos) puts newPos px off-screen; center of item = newPos + itemH/2
+  // We want: reelH/2 = itemH * symIdx + itemH/2 within the visible block
+  // Adjustment to land item in exact center:
+  const centerAdj = reelH / 2 - itemH / 2;
+  const finalPos  = newPos - centerAdj;
+
+  strip.style.transition = 'none';
+  strip.style.transform  = `translateY(-${currentPos}px)`;
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      strip.style.setProperty('--spin-dur', duration + 'ms');
+      strip.classList.add('spinning');
+      strip.style.transition = `transform ${duration}ms cubic-bezier(0.18, 0.89, 0.32, 1)`;
+      strip.style.transform  = `translateY(-${finalPos}px)`;
+      strip.dataset.pos = finalPos;
+    });
+  });
+
+  setTimeout(() => {
+    strip.classList.remove('spinning');
+    callback();
+  }, duration + 50);
+}
+
+// ─────────────────────────────────────────────
+// SPIN LOGIC
+// ─────────────────────────────────────────────
+function doSpin() {
+  if (spinning || spinsLeft <= 0) return;
+  spinning = true;
+  document.getElementById('btn-spin').disabled = true;
+
+  // Determine results
+  const results = [weightedRandom(), weightedRandom(), weightedRandom()];
+
+  // Machine shake
+  const mach = document.getElementById('machine');
+  mach.classList.add('shaking');
+  setTimeout(() => mach.classList.remove('shaking'), 400);
+
+  // Spin durations — each reel stops sequentially
+  const durations = [1600, 2100, 2700];
+  let stopped = 0;
+
+  results.forEach((sym, i) => {
+    spinReel(i, sym, durations[i], () => {
+      stopped++;
+      if (stopped === results.length) onSpinComplete(results);
+    });
+  });
+}
+
+function resetStrips() {
+  const itemH   = getItemH();
+  const initPos = Math.floor(STRIP_REPEATS / 2) * SYMBOLS.length * itemH;
+  [0,1,2].forEach(i => {
+    const strip = document.getElementById('strip-' + i);
+    if (!strip) return;
+    strip.style.transition = 'none';
+    strip.style.transform  = `translateY(-${initPos}px)`;
+    strip.dataset.pos      = initPos;
+  });
+}
+
+function onSpinComplete(results) {
+  spinning = false;
+  spinsLeft--;
+  updateDots();
+
+  // Reset strips to start position while overlay covers screen
+  setTimeout(resetStrips, 300);
+
+  const won = results[0].id === results[1].id && results[1].id === results[2].id;
+  let code = null;
+  if (won) {
+    code = randCode(results[0].prefix);
+    results.forEach((_, i) => {
+      setTimeout(() => {
+        document.getElementById('reel-' + i).classList.add('win-flash');
+      }, i * 120);
+    });
+    setTimeout(launchConfetti, 400);
+  }
+
+  // Build result object
+  lastResult = { reels: results, won, code, discount: won ? results[0].discount : 0 };
+
+  // Log to localStorage
+  logSpin({ name: userName, phone: userPhone, reels: results, won, code });
+
+  // Webhook (fire-and-forget)
+  if (CFG.WEBHOOK_URL) {
+    fetch(CFG.WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: userName, phone: userPhone,
+        timestamp: new Date().toISOString(),
+        reel1: results[0].label, reel2: results[1].label, reel3: results[2].label,
+        won, code: code || '',
+      })
+    }).catch(() => {});
+  }
+
+  setTimeout(() => showResult(results, won, code), 600);
+}
+
+// ─────────────────────────────────────────────
+// RESULT OVERLAY
+// ─────────────────────────────────────────────
+function showResult(results, won, code) {
+  const card    = document.getElementById('res-card');
+  const overlay = document.getElementById('overlay');
+
+  document.getElementById('res-icon').textContent  = won ? '🎉' : '🎰';
+  const titleEl = document.getElementById('res-title');
+  const descEl  = document.getElementById('res-desc');
+  titleEl.className = 'res-title ' + (won ? 'win' : 'lose');
+  card.className    = 'res-card ' + (won ? 'win' : '');
+
+  if (won) {
+    titleEl.textContent = 'JACKPOT!';
+    descEl.textContent  = `All three match — you've won a ${results[0].discount}% discount!`;
+  } else {
+    titleEl.textContent = 'Not This Time';
+    descEl.textContent  = spinsLeft > 0
+      ? `Keep spinning — you have ${spinsLeft} spin${spinsLeft > 1 ? 's' : ''} left!`
+      : 'Better luck next time. Thanks for playing!';
+  }
+
+  // Reel chips
+  const reelsEl = document.getElementById('res-reels');
+  reelsEl.innerHTML = results.map(s =>
+    `<span class="res-chip ${s.cls}">${s.label}</span>`
+  ).join('<span style="color:var(--cream-20);font-size:12px;margin:0 2px">·</span>');
+
+  // Discount box
+  const dBox = document.getElementById('discount-box');
+  const shareBtn = document.getElementById('btn-share');
+  if (won && code) {
+    document.getElementById('disc-pct').textContent  = results[0].discount + '%';
+    document.getElementById('disc-code').textContent = code;
+    dBox.classList.remove('hidden');
+    shareBtn.classList.remove('hidden');
+
+    // Copy code on click
+    document.getElementById('disc-code').onclick = () => {
+      navigator.clipboard.writeText(code).catch(() => {});
+      document.getElementById('disc-code').textContent = '✓ COPIED!';
+      setTimeout(() => { document.getElementById('disc-code').textContent = code; }, 1800);
+    };
+
+    // WhatsApp share
+    const waText = encodeURIComponent(`Hi STARFILL Team! I just won a ${results[0].discount}% discount on my Lucky Spin! 🎉\nMy code: ${code}\nName: ${userName}\nPhone: ${userPhone}`);
+    shareBtn.onclick = () => window.open(`https://wa.me/${CFG.WHATSAPP_NUM}?text=${waText}`, '_blank');
+  } else {
+    dBox.classList.add('hidden');
+    shareBtn.classList.add('hidden');
+  }
+
+  // Spin again button
+  const againBtn = document.getElementById('btn-again');
+  const noteEl   = document.getElementById('spins-left-note');
+  if (spinsLeft > 0) {
+    againBtn.textContent = 'SPIN AGAIN';
+    againBtn.classList.remove('hidden');
+    noteEl.textContent = `${spinsLeft} spin${spinsLeft > 1 ? 's' : ''} remaining`;
+  } else {
+    againBtn.textContent = 'NO MORE SPINS';
+    againBtn.disabled = true;
+    noteEl.textContent = 'You\'ve used all your spins. Thanks for playing!';
+  }
+
+  overlay.classList.remove('hidden');
+}
+
+function closeOverlay() {
+  document.getElementById('overlay').classList.add('hidden');
+  // Remove win flash
+  document.querySelectorAll('.reel').forEach(r => r.classList.remove('win-flash'));
+  if (spinsLeft > 0) {
+    document.getElementById('btn-spin').disabled = false;
+  } else {
+    document.getElementById('btn-spin').disabled = true;
+    document.getElementById('btn-spin').querySelector('.btn-spin-sub').textContent = 'NO SPINS LEFT';
+  }
+}
+
+document.getElementById('btn-again').addEventListener('click', closeOverlay);
+
+// ─────────────────────────────────────────────
+// SPIN DOTS
+// ─────────────────────────────────────────────
+function updateDots() {
+  const dots = document.querySelectorAll('.sdot');
+  const used = CFG.MAX_SPINS - spinsLeft;
+  dots.forEach((d, i) => {
+    d.classList.toggle('used', i < used);
+  });
+}
+
+// ─────────────────────────────────────────────
+// REGISTRATION
+// ─────────────────────────────────────────────
+document.getElementById('reg-form').addEventListener('submit', e => {
+  e.preventDefault();
+  userName  = document.getElementById('inp-name').value.trim();
+  userPhone = document.getElementById('inp-phone').value.trim();
+  if (!userName || !userPhone) return;
+
+  document.getElementById('lbl-name').textContent = userName;
+  document.getElementById('screen-register').classList.add('hidden');
+  document.getElementById('screen-machine').classList.remove('hidden');
+
+  // Build all reel strips
+  [0,1,2].forEach(i => buildStrip(i));
+  spinsLeft = CFG.MAX_SPINS;
+  updateDots();
+});
+
+document.getElementById('btn-spin').addEventListener('click', doSpin);
+
+// ─────────────────────────────────────────────
+// LOCALSTORAGE LOGGING
+// ─────────────────────────────────────────────
+const LS_KEY = 'sf_spins';
+
+function logSpin(entry) {
+  const all = getAll();
+  all.push({
+    ts:     new Date().toISOString(),
+    name:   entry.name,
+    phone:  entry.phone,
+    r1:     entry.reels[0].label,
+    r2:     entry.reels[1].label,
+    r3:     entry.reels[2].label,
+    won:    entry.won,
+    code:   entry.code || '',
+  });
+  localStorage.setItem(LS_KEY, JSON.stringify(all));
+}
+
+function getAll() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch { return []; }
+}
+
+// ─────────────────────────────────────────────
+// ADMIN PANEL
+// ─────────────────────────────────────────────
+function renderAdmin() {
+  const all   = getAll();
+  const total = all.length;
+  const wins  = all.filter(r => r.won).length;
+  const uniq  = new Set(all.map(r => r.phone)).size;
+
+  document.getElementById('adm-stats').innerHTML = `
+    <div class="adm-stat"><div class="adm-stat-n">${total}</div><div class="adm-stat-l">Total Spins</div></div>
+    <div class="adm-stat"><div class="adm-stat-n">${wins}</div><div class="adm-stat-l">Winners</div></div>
+    <div class="adm-stat"><div class="adm-stat-n">${uniq}</div><div class="adm-stat-l">Unique Users</div></div>
+    <div class="adm-stat"><div class="adm-stat-n">${total ? Math.round(wins/total*100) : 0}%</div><div class="adm-stat-l">Win Rate</div></div>
+  `;
+
+  const tbody = document.getElementById('adm-tbody');
+  if (!all.length) {
+    tbody.innerHTML = `<tr><td colspan="9" class="adm-empty">No spins recorded yet.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = [...all].reverse().map((r, i) => `
+    <tr>
+      <td style="color:var(--cream-40);font-family:'DM Mono',monospace;font-size:11px">${all.length - i}</td>
+      <td style="font-size:12px;color:var(--cream-40);font-family:'DM Mono',monospace;white-space:nowrap">${new Date(r.ts).toLocaleString('en-IN')}</td>
+      <td>${r.name}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px">${r.phone}</td>
+      <td style="font-size:12px">${r.r1}</td>
+      <td style="font-size:12px">${r.r2}</td>
+      <td style="font-size:12px">${r.r3}</td>
+      <td>${r.won ? '<span class="badge-win">🏆 WON</span>' : '<span class="badge-lose">— miss</span>'}</td>
+      <td>${r.code ? `<span class="code-val">${r.code}</span>` : '<span style="color:var(--cream-20);font-size:11px">—</span>'}</td>
+    </tr>
+  `).join('');
+}
+
+function exportCSV() {
+  const all = getAll();
+  if (!all.length) { alert('No data to export.'); return; }
+  const header = ['#','Timestamp','Name','Phone','Reel1','Reel2','Reel3','Won','Code'];
+  const rows   = all.map((r,i) => [i+1, r.ts, `"${r.name}"`, r.phone, `"${r.r1}"`, `"${r.r2}"`, `"${r.r3}"`, r.won?'YES':'NO', r.code]);
+  const csv    = [header, ...rows].map(r => r.join(',')).join('\n');
+  const blob   = new Blob([csv], {type:'text/csv'});
+  const a      = document.createElement('a');
+  a.href       = URL.createObjectURL(blob);
+  a.download   = `starfill-spins-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+function clearAll() {
+  if (!confirm('Delete all spin records? This cannot be undone.')) return;
+  localStorage.removeItem(LS_KEY);
+  renderAdmin();
+}
+
+// ─────────────────────────────────────────────
+// CONFETTI
+// ─────────────────────────────────────────────
+function launchConfetti() {
+  const canvas = document.getElementById('confetti');
+  const ctx    = canvas.getContext('2d');
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const COLORS = ['#d4a53a','#f0c060','#b060c0','#38c0d8','#f2ece0','#a84868'];
+  const pieces = Array.from({length: 90}, () => ({
+    x:   Math.random() * canvas.width,
+    y:   -20 - Math.random() * 80,
+    w:   6 + Math.random() * 8,
+    h:   10 + Math.random() * 12,
+    col: COLORS[Math.floor(Math.random() * COLORS.length)],
+    vx:  (Math.random() - 0.5) * 3.5,
+    vy:  3 + Math.random() * 4,
+    rot: Math.random() * Math.PI * 2,
+    rv:  (Math.random() - 0.5) * 0.18,
+    op:  1,
+  }));
+
+  let frame = 0;
+  function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    let alive = 0;
+    for (const p of pieces) {
+      p.x  += p.vx; p.y += p.vy;
+      p.rot += p.rv;
+      if (frame > 80) p.op = Math.max(0, p.op - 0.015);
+      if (p.y < canvas.height + 40 && p.op > 0) {
+        alive++;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.globalAlpha = p.op;
+        ctx.fillStyle = p.col;
+        ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+        ctx.restore();
+      }
+    }
+    frame++;
+    if (alive > 0) requestAnimationFrame(draw);
+    else ctx.clearRect(0,0,canvas.width,canvas.height);
+  }
+  requestAnimationFrame(draw);
+}
+
+// ─────────────────────────────────────────────
+// INIT — check for admin mode
+// ─────────────────────────────────────────────
+(function init() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('admin') === CFG.ADMIN_KEY) {
+    document.getElementById('screen-register').classList.add('hidden');
+    document.getElementById('admin-panel').classList.remove('hidden');
+    renderAdmin();
+  }
+})();
+</script>
+</body>
+</html>
