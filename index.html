@@ -330,14 +330,14 @@
       gap: 5px; padding: 6px;
       text-align: center; user-select: none;
     }
-    .sym-star { font-size: 12px; letter-spacing: 3px; }
+    .sym-star { font-size: 15px; letter-spacing: 3px; }
     .sym-l1 {
       font-family: 'Cinzel Decorative', serif;
-      font-size: 7.5px; font-weight: 700; letter-spacing: 0.1em;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
     }
     .sym-l2 {
       font-family: 'DM Mono', monospace;
-      font-size: 8.5px; font-weight: 500; letter-spacing: 0.04em;
+      font-size: 11px; font-weight: 500; letter-spacing: 0.03em;
     }
     .sym.s-plus    { color: var(--plus-col);  background: linear-gradient(160deg, #160e00, #1e1400); }
     .sym.s-deep    { color: var(--deep-col);  background: linear-gradient(160deg, #120818, #1a0c24); }
@@ -485,32 +485,28 @@
     .res-chip.s-deep    { background: rgba(176,96,192,0.15); color: var(--deep-col); border: 1px solid rgba(176,96,192,0.3); }
     .res-chip.s-implant { background: rgba(56,192,216,0.15); color: var(--imp-col);  border: 1px solid rgba(56,192,216,0.3); }
 
-    /* Discount box */
+    /* Win prize box */
     .discount-box {
       background: rgba(201,148,58,0.07);
       border: 1px dashed rgba(201,148,58,0.45);
-      border-radius: 14px; padding: 18px 20px; margin-bottom: 18px;
+      border-radius: 14px; padding: 22px 20px; margin-bottom: 18px;
     }
     .disc-label {
       font-family: 'DM Mono', monospace; font-size: 10px;
-      color: var(--gold); letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 10px;
+      color: var(--gold); letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 12px;
     }
-    .disc-pct {
+    .disc-prize-intro {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 17px; font-style: italic;
+      color: var(--cream-70); margin-bottom: 6px;
+    }
+    .disc-product-name {
       font-family: 'Cinzel Decorative', serif;
-      font-size: 40px; font-weight: 900;
-      color: var(--gold-lt); line-height: 1;
+      font-size: clamp(16px, 5vw, 22px); font-weight: 900;
+      color: var(--gold-lt); line-height: 1.2;
+      text-shadow: 0 0 20px rgba(201,148,58,0.4);
     }
-    .disc-off { font-size: 14px; color: var(--cream-40); margin-top: 4px; }
-    .disc-code {
-      font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500;
-      color: var(--cream);
-      background: rgba(255,255,255,0.07); border-radius: 8px;
-      padding: 10px 16px; margin-top: 14px;
-      letter-spacing: 0.14em; cursor: pointer;
-      transition: background 0.2s; user-select: all;
-    }
-    .disc-code:hover { background: rgba(255,255,255,0.12); }
-    .disc-hint { font-size: 11px; color: var(--cream-20); margin-top: 6px; font-style: italic; }
+    .disc-hint { font-size: 12px; color: var(--cream-20); margin-top: 10px; font-style: italic; }
 
     .btn-whatsapp {
       width: 100%;
@@ -712,11 +708,10 @@
     <div class="res-reels" id="res-reels"></div>
 
     <div id="discount-box" class="discount-box hidden">
-      <div class="disc-label">Your Exclusive Discount</div>
-      <div class="disc-pct" id="disc-pct">—%</div>
-      <div class="disc-off">OFF on your next treatment</div>
-      <div class="disc-code" id="disc-code" title="Tap to copy">—</div>
-      <div class="disc-hint">Tap code to copy · Show this to our team</div>
+      <div class="disc-label">You Have Won</div>
+      <div class="disc-prize-intro">Free treatment with</div>
+      <div class="disc-product-name" id="disc-product-name">—</div>
+      <div class="disc-hint">Show this screen to our team to claim your prize</div>
     </div>
 
     <button class="btn-whatsapp hidden" id="btn-share">
@@ -776,7 +771,7 @@ const CFG = {
   ADMIN_KEY:    'starfill2026',   // URL param: ?admin=starfill2026
   MAX_SPINS:    3,                // spins per session
   WEBHOOK_URL:  '',               // optional: paste Google Apps Script URL here
-  WHATSAPP_NUM: '919999999999',   // your WhatsApp number for prize claim
+  WHATSAPP_NUM: '919987264974',   // your WhatsApp number for prize claim
 };
 
 // ─────────────────────────────────────────────
@@ -1008,7 +1003,7 @@ function showResult(results, won, code) {
 
   if (won) {
     titleEl.textContent = 'JACKPOT!';
-    descEl.textContent  = `All three match — you've won a ${results[0].discount}% discount!`;
+    descEl.textContent  = `All three match — you've won a free ${results[0].label}!`;
   } else {
     titleEl.textContent = 'Not This Time';
     descEl.textContent  = spinsLeft > 0
@@ -1022,24 +1017,16 @@ function showResult(results, won, code) {
     `<span class="res-chip ${s.cls}">${s.label}</span>`
   ).join('<span style="color:var(--cream-20);font-size:12px;margin:0 2px">·</span>');
 
-  // Discount box
+  // Win prize box
   const dBox = document.getElementById('discount-box');
   const shareBtn = document.getElementById('btn-share');
-  if (won && code) {
-    document.getElementById('disc-pct').textContent  = results[0].discount + '%';
-    document.getElementById('disc-code').textContent = code;
+  if (won) {
+    document.getElementById('disc-product-name').textContent = results[0].label;
     dBox.classList.remove('hidden');
     shareBtn.classList.remove('hidden');
 
-    // Copy code on click
-    document.getElementById('disc-code').onclick = () => {
-      navigator.clipboard.writeText(code).catch(() => {});
-      document.getElementById('disc-code').textContent = '✓ COPIED!';
-      setTimeout(() => { document.getElementById('disc-code').textContent = code; }, 1800);
-    };
-
     // WhatsApp share
-    const waText = encodeURIComponent(`Hi STARFILL Team! I just won a ${results[0].discount}% discount on my Lucky Spin! 🎉\nMy code: ${code}\nName: ${userName}\nPhone: ${userPhone}`);
+    const waText = encodeURIComponent(`Hi! I just won Free ${results[0].label} on the STARFILL Lucky Spin! 🎉\nName: ${userName}\nPhone: ${userPhone}`);
     shareBtn.onclick = () => window.open(`https://wa.me/${CFG.WHATSAPP_NUM}?text=${waText}`, '_blank');
   } else {
     dBox.classList.add('hidden');
