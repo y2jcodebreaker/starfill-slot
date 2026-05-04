@@ -950,6 +950,10 @@ function onSpinComplete(results) {
   spinsLeft--;
   updateDots();
 
+  // Persist spin count so reloading doesn't reset it
+  const spinsUsed = CFG.MAX_SPINS - spinsLeft;
+  saveUserSpins(userPhone, serverDate, spinsUsed);
+
   // Reset strips to start position while overlay covers screen
   setTimeout(resetStrips, 300);
 
@@ -1077,19 +1081,77 @@ function updateDots() {
 // ─────────────────────────────────────────────
 // REGISTRATION
 // ─────────────────────────────────────────────
-document.getElementById('reg-form').addEventListener('submit', e => {
+// ─────────────────────────────────────────────
+// SERVER DATE — fetch from public API so device clock can't be manipulated
+// ─────────────────────────────────────────────
+async function fetchServerDate() {
+  try {
+    const res  = await fetch('https://worldtimeapi.org/api/timezone/Asia/Kolkata', { cache: 'no-store' });
+    const data = await res.json();
+    // datetime is like "2026-05-04T10:30:00.000+05:30"
+    return data.datetime.slice(0, 10); // "YYYY-MM-DD"
+  } catch {
+    // Fallback to device date only if API unreachable
+    return new Date().toISOString().slice(0, 10);
+  }
+}
+
+// ─────────────────────────────────────────────
+// PER-PHONE SPIN STATE — persists across reloads
+// ─────────────────────────────────────────────
+function userKey(phone) { return 'sf_user_' + phone.replace(/\D/g, ''); }
+
+function loadUserSpins(phone, serverDate) {
+  try {
+    const raw  = localStorage.getItem(userKey(phone));
+    if (!raw) return CFG.MAX_SPINS; // first time
+    const data = JSON.parse(raw);
+    // If stored date != today (server date), reset
+    if (data.date !== serverDate) return CFG.MAX_SPINS;
+    return Math.max(0, CFG.MAX_SPINS - (data.spinsUsed || 0));
+  } catch { return CFG.MAX_SPINS; }
+}
+
+function saveUserSpins(phone, serverDate, spinsUsedTotal) {
+  localStorage.setItem(userKey(phone), JSON.stringify({ date: serverDate, spinsUsed: spinsUsedTotal }));
+}
+
+let serverDate = ''; // set on registration
+
+// ─────────────────────────────────────────────
+// REGISTRATION
+// ─────────────────────────────────────────────
+document.getElementById('reg-form').addEventListener('submit', async e => {
   e.preventDefault();
-  userName  = document.getElementById('inp-name').value.trim();
-  userPhone = document.getElementById('inp-phone').value.trim();
-  if (!userName || !userPhone) return;
+  const nameVal  = document.getElementById('inp-name').value.trim();
+  const phoneVal = document.getElementById('inp-phone').value.trim();
+  if (!nameVal || !phoneVal) return;
+
+  // Disable button while fetching date
+  const btn = document.querySelector('.btn-start');
+  btn.textContent = 'Checking...';
+  btn.disabled = true;
+
+  serverDate = await fetchServerDate();
+  const remaining = loadUserSpins(phoneVal, serverDate);
+
+  btn.textContent = 'START SPINNING';
+  btn.disabled = false;
+
+  if (remaining <= 0) {
+    alert(`You've used all your free spins for today.\n\nCome back tomorrow for 3 new free spins! 🎰`);
+    return;
+  }
+
+  userName  = nameVal;
+  userPhone = phoneVal;
+  spinsLeft = remaining;
 
   document.getElementById('lbl-name').textContent = userName;
   document.getElementById('screen-register').classList.add('hidden');
   document.getElementById('screen-machine').classList.remove('hidden');
 
-  // Build all reel strips
   [0,1,2].forEach(i => buildStrip(i));
-  spinsLeft = CFG.MAX_SPINS;
   updateDots();
 });
 
