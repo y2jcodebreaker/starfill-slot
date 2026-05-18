@@ -912,8 +912,12 @@ function doSpin() {
   spinning = true;
   document.getElementById('btn-spin').disabled = true;
 
-  // Determine results
-  const results = [weightedRandom(), weightedRandom(), weightedRandom()];
+  // Determine results — supports ?forceWin=plus|deep|implant for testing
+  const forceWin = new URLSearchParams(location.search).get('forceWin');
+  const forcedSym = forceWin ? SYMBOLS.find(s => s.id === forceWin) : null;
+  const results = forcedSym
+    ? [forcedSym, forcedSym, forcedSym]
+    : [weightedRandom(), weightedRandom(), weightedRandom()];
 
   // Machine shake
   const mach = document.getElementById('machine');
