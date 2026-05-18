@@ -501,9 +501,10 @@
       color: var(--cream-70); margin-bottom: 6px;
     }
     .disc-product-name {
-      font-family: 'Cinzel Decorative', serif;
-      font-size: clamp(16px, 5vw, 22px); font-weight: 900;
-      color: var(--gold-lt); line-height: 1.2;
+      font-family: 'DM Mono', monospace;
+      font-size: clamp(18px, 5.5vw, 26px); font-weight: 500;
+      color: var(--gold-lt); line-height: 1.25;
+      letter-spacing: 0.08em;
       text-shadow: 0 0 20px rgba(201,148,58,0.4);
     }
     .disc-hint { font-size: 12px; color: var(--cream-20); margin-top: 10px; font-style: italic; }
@@ -705,7 +706,7 @@
     <span class="res-icon" id="res-icon">🎰</span>
     <div class="res-title" id="res-title">—</div>
     <div class="res-desc"  id="res-desc">—</div>
-    <div class="res-reels" id="res-reels"></div>
+    <div class="res-reels hidden" id="res-reels"></div>
 
     <div id="discount-box" class="discount-box hidden">
       <div class="disc-label">You Have Won</div>
@@ -1018,11 +1019,8 @@ function showResult(results, won, code) {
       : 'Better luck next time. Thanks for playing!';
   }
 
-  // Reel chips
-  const reelsEl = document.getElementById('res-reels');
-  reelsEl.innerHTML = results.map(s =>
-    `<span class="res-chip ${s.cls}">${s.label}</span>`
-  ).join('<span style="color:var(--cream-20);font-size:12px;margin:0 2px">·</span>');
+  // Reel chips — hidden (kept in DOM for future use, no content)
+  document.getElementById('res-reels').innerHTML = '';
 
   // Win prize box
   const dBox = document.getElementById('discount-box');
