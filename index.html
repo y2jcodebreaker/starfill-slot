@@ -826,6 +826,13 @@ function randCode(prefix) {
   return prefix + '-' + Math.floor(1000 + Math.random() * 9000);
 }
 
+// Escape user-supplied text before inserting into HTML (prevents stored XSS in admin)
+function esc(str) {
+  return String(str ?? '').replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+  ));
+}
+
 function symCard(s) {
   return `<div class="sym ${s.cls}">
     <div class="sym-star">${s.star}</div>
@@ -913,8 +920,11 @@ function doSpin() {
   spinning = true;
   document.getElementById('btn-spin').disabled = true;
 
-  // Determine results — supports ?forceWin=plus|deep|implant for testing
-  const forceWin = new URLSearchParams(location.search).get('forceWin');
+  // Determine results — ?forceWin=plus|deep|implant works ONLY with the admin key
+  // (e.g. ?admin=starfill2026&forceWin=implant) so the public can't exploit it
+  const params   = new URLSearchParams(location.search);
+  const isAdmin  = params.get('admin') === CFG.ADMIN_KEY;
+  const forceWin = isAdmin ? params.get('forceWin') : null;
   const forcedSym = forceWin ? SYMBOLS.find(s => s.id === forceWin) : null;
   const results = forcedSym
     ? [forcedSym, forcedSym, forcedSym]
@@ -1207,13 +1217,13 @@ function renderAdmin() {
     <tr>
       <td style="color:var(--cream-40);font-family:'DM Mono',monospace;font-size:11px">${all.length - i}</td>
       <td style="font-size:12px;color:var(--cream-40);font-family:'DM Mono',monospace;white-space:nowrap">${new Date(r.ts).toLocaleString('en-IN')}</td>
-      <td>${r.name}</td>
-      <td style="font-family:'DM Mono',monospace;font-size:12px">${r.phone}</td>
-      <td style="font-size:12px">${r.r1}</td>
-      <td style="font-size:12px">${r.r2}</td>
-      <td style="font-size:12px">${r.r3}</td>
+      <td>${esc(r.name)}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px">${esc(r.phone)}</td>
+      <td style="font-size:12px">${esc(r.r1)}</td>
+      <td style="font-size:12px">${esc(r.r2)}</td>
+      <td style="font-size:12px">${esc(r.r3)}</td>
       <td>${r.won ? '<span class="badge-win">🏆 WON</span>' : '<span class="badge-lose">— miss</span>'}</td>
-      <td>${r.code ? `<span class="code-val">${r.code}</span>` : '<span style="color:var(--cream-20);font-size:11px">—</span>'}</td>
+      <td>${r.code ? `<span class="code-val">${esc(r.code)}</span>` : '<span style="color:var(--cream-20);font-size:11px">—</span>'}</td>
     </tr>
   `).join('');
 }
