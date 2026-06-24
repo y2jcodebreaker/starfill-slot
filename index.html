@@ -989,11 +989,12 @@ function onSpinComplete(results) {
   // Log to localStorage
   logSpin({ name: userName, phone: userPhone, reels: results, won, code });
 
-  // Webhook (fire-and-forget)
+  // Webhook (fire-and-forget). text/plain avoids a CORS preflight so the
+  // POST reaches Google Apps Script reliably from GitHub Pages.
   if (CFG.WEBHOOK_URL) {
     fetch(CFG.WEBHOOK_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({
         name: userName, phone: userPhone,
         timestamp: new Date().toISOString(),
@@ -1134,9 +1135,17 @@ let serverDate = ''; // set on registration
 // ─────────────────────────────────────────────
 document.getElementById('reg-form').addEventListener('submit', async e => {
   e.preventDefault();
-  const nameVal  = document.getElementById('inp-name').value.trim();
-  const phoneVal = document.getElementById('inp-phone').value.trim();
+  const nameVal  = document.getElementById('inp-name').value.trim().slice(0, 60);
+  const phoneVal = document.getElementById('inp-phone').value.trim().slice(0, 20);
   if (!nameVal || !phoneVal) return;
+
+  // Validate phone: must contain exactly 10 digits (Indian mobile),
+  // ignoring spaces, dashes, or a leading +91 / 0
+  const digits = phoneVal.replace(/\D/g, '').replace(/^(91|0)/, '');
+  if (digits.length !== 10) {
+    alert('Please enter a valid 10-digit mobile number.');
+    return;
+  }
 
   // Disable button while fetching date
   const btn = document.querySelector('.btn-start');
@@ -1144,7 +1153,7 @@ document.getElementById('reg-form').addEventListener('submit', async e => {
   btn.disabled = true;
 
   serverDate = await fetchServerDate();
-  const remaining = loadUserSpins(phoneVal, serverDate);
+  const remaining = loadUserSpins(digits, serverDate);
 
   btn.textContent = 'START SPINNING';
   btn.disabled = false;
@@ -1155,7 +1164,7 @@ document.getElementById('reg-form').addEventListener('submit', async e => {
   }
 
   userName  = nameVal;
-  userPhone = phoneVal;
+  userPhone = digits; // normalized 10-digit form (consistent daily-limit key)
   spinsLeft = remaining;
 
   document.getElementById('lbl-name').textContent = userName;
