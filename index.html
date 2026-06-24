@@ -989,11 +989,13 @@ function onSpinComplete(results) {
   // Log to localStorage
   logSpin({ name: userName, phone: userPhone, reels: results, won, code });
 
-  // Webhook (fire-and-forget). text/plain avoids a CORS preflight so the
-  // POST reaches Google Apps Script reliably from GitHub Pages.
+  // Webhook (fire-and-forget). no-cors + text/plain makes this a "simple"
+  // opaque request: the browser sends the POST without trying to read the
+  // cross-origin redirect response, so it reaches Google Apps Script reliably.
   if (CFG.WEBHOOK_URL) {
     fetch(CFG.WEBHOOK_URL, {
       method: 'POST',
+      mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({
         name: userName, phone: userPhone,
