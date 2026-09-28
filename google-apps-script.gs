@@ -30,8 +30,10 @@ var CONFIG = {
   PRIZE_WINDOW_SPINS: 120,
   // Safety net for a slow day: from this time (IST), any prize still left is
   // awarded on the next spin(s), so the day still ends with exactly 2 winners.
-  // Set this to about an hour before the booth closes. '' disables it.
-  LAST_CALL_TIME: '16:00',
+  // Stall hours are 09:30-17:00 IST (3-4 Oct), so last call is 2 hours before
+  // closing: exactly 2 winners on ~99% of days even at only 20 visitors.
+  // '' disables it.
+  LAST_CALL_TIME: '15:00',
   WIN_LOCK_HOURS: 24,
   RESET_SPINS_DAILY: true,  // false = 3 spins for the whole event
   // Anti-cheat: after a mobile number checks in on a phone, that phone must

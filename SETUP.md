@@ -12,7 +12,7 @@ second device:
 | A winner can't play again for 24 hours | `WIN_LOCK_HOURS` (set 48 to block winners for the whole 2-day event) |
 | Exactly 2 winners per day, never more | `WINNERS_PER_DAY` |
 | Winners spread over the first ~120 spins (~42 visitors) | `PRIZE_WINDOW_SPINS` |
-| Any prize still left after 16:00 IST goes to the next spin | `LAST_CALL_TIME` (set about 1 hour before the booth closes) |
+| Any prize still left after 15:00 IST goes to the next spin (stall open 09:30–17:00 IST, 3–4 Oct) | `LAST_CALL_TIME` |
 | Prize mix when someone wins: PLUS 50%, DEEP+ 30%, IMPLANT+ 20% | `SYMBOLS[].weight` |
 | A phone must wait 2 min before checking in a *different* number (booth tablet exempt) | `NEW_NUMBER_COOLDOWN_SECONDS` |
 
