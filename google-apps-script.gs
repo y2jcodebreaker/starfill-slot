@@ -63,6 +63,7 @@ function doPost(e) {
       case 'spin':         return json_(withLock_(function () { return spin_(req); }));
       case 'admin_days':   return json_(adminDays_(req));
       case 'admin_export': return json_(adminExport_(req));
+      case 'admin_verify': return json_(adminVerify_(req));
       default:             return json_({ ok: false, error: 'unknown_action' });
     }
   } catch (err) {
@@ -86,7 +87,7 @@ function doGet() {
 function resetAllData() {
   var p = props_();
   Object.keys(p.getProperties()).forEach(function (k) {
-    if (k.indexOf('u:') === 0 || k.indexOf('d:') === 0) p.deleteProperty(k);
+    if (/^(u|d|code):/.test(k)) p.deleteProperty(k);
   });
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var suffix = ' (archived ' + stamp_(Date.now()) + ')';
@@ -173,7 +174,13 @@ function spin_(req) {
     }
   }
 
-  var code = won ? prize.prefix + '-' + randomDigits_(5) : '';
+  var code = '';
+  if (won) {
+    code = newClaimCode_(prize.prefix);
+    props_().setProperty('code:' + code, JSON.stringify({
+      name: u.name, phone: phone, prize: prize.label, issued: stamp_(now), test: !!forced,
+    }));
+  }
   if (!forced) {
     u.used = (u.used || 0) + 1;
     stats.spins += 1;
@@ -253,6 +260,18 @@ function adminDays_(req) {
   });
   var list = Object.keys(days).sort().reverse().map(function (k) { return days[k]; });
   return { ok: true, days: list, today: dayKey_(Date.now()), winnersPerDay: CONFIG.WINNERS_PER_DAY };
+}
+
+// Staff check a code shown on a winner's phone
+function adminVerify_(req) {
+  if (!isAdmin_(req.adminKey)) return { ok: false, error: 'unauthorized' };
+  var code = normalizeCode_(req.code);
+  if (!isWellFormedCode_(code)) return { ok: true, valid: false, code: code, reason: 'not_a_real_code' };
+  var raw = props_().getProperty('code:' + code);
+  if (!raw) return { ok: true, valid: false, code: code, reason: 'not_issued' };
+  var info = JSON.parse(raw);
+  return { ok: true, valid: !info.test, test: !!info.test, code: code,
+           name: info.name, phone: info.phone, prize: info.prize, issued: info.issued };
 }
 
 function adminExport_(req) {
@@ -368,10 +387,65 @@ function symbolById_(id) {
 }
 function labelOf_(id) { var s = symbolById_(id); return s ? s.label : id; }
 
-function randomDigits_(n) {
+// ─────────────────────────────────────────────
+// CLAIM CODES — e.g. SFI-7KQ4XM9
+//   prefix (prize) + 6 random characters + 1 check character.
+//   Characters exclude look-alikes (0/O, 1/I/L, U) so codes are easy to read out.
+//   Randomness comes from Utilities.getUuid() (a secure random UUID v4), not
+//   Math.random(). The check character makes typos and made-up codes fail
+//   validation, and every issued code is stored so each one is unique.
+// ─────────────────────────────────────────────
+var CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTVWXYZ'; // 30 characters
+var CODE_BODY_LEN = 6;                                // 30^6 ≈ 729 million codes per prize
+
+function newClaimCode_(prefix) {
+  for (var attempt = 0; attempt < 20; attempt++) {
+    var body = secureRandomChars_(CODE_BODY_LEN);
+    var code = prefix + '-' + body + codeCheckChar_(prefix, body);
+    if (!props_().getProperty('code:' + code)) return code;
+  }
+  throw new Error('could not generate a unique claim code');
+}
+
+// Uniform random characters from CODE_ALPHABET using UUID bytes
+// (bytes >= 240 are skipped so every character is equally likely)
+function secureRandomChars_(n) {
   var out = '';
-  for (var i = 0; i < n; i++) out += Math.floor(Math.random() * 10);
+  while (out.length < n) {
+    var hex = Utilities.getUuid().replace(/-/g, '');
+    for (var i = 0; i + 1 < hex.length && out.length < n; i += 2) {
+      if (i === 12 || i === 16) continue;  // UUID version/variant bytes aren't random
+      var b = parseInt(hex.substr(i, 2), 16);
+      if (b < 240) out += CODE_ALPHABET.charAt(b % CODE_ALPHABET.length);
+    }
+  }
   return out;
+}
+
+// Check character: Luhn mod 30 over the prize letter + the random body.
+// Catches every single wrong character (including a changed prize prefix,
+// e.g. SFP → SFI) and almost every swap of two neighbouring characters.
+var CODE_PRIZE_CHAR = { SFP: 'P', SFD: 'D', SFI: 'J' };
+
+function codeCheckChar_(prefix, body) {
+  var s = CODE_PRIZE_CHAR[prefix] + body;
+  var n = CODE_ALPHABET.length, factor = 2, sum = 0;
+  for (var i = s.length - 1; i >= 0; i--) {
+    var addend = factor * CODE_ALPHABET.indexOf(s.charAt(i));
+    addend = Math.floor(addend / n) + (addend % n);
+    sum += addend;
+    factor = factor === 2 ? 1 : 2;
+  }
+  return CODE_ALPHABET.charAt((n - (sum % n)) % n);
+}
+
+function normalizeCode_(raw) {
+  return String(raw || '').toUpperCase().replace(/\s/g, '');
+}
+
+function isWellFormedCode_(code) {
+  var m = /^(SF[PDI])-([2-9A-HJKMNP-TV-Z]{6})([2-9A-HJKMNP-TV-Z])$/.exec(code);
+  return !!m && codeCheckChar_(m[1], m[2]) === m[3];
 }
 
 function dayKey_(ms) { return Utilities.formatDate(new Date(ms), CONFIG.TIMEZONE, 'yyyy-MM-dd'); }

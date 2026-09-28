@@ -628,6 +628,23 @@
     .adm-msg { font-size: 14px; font-style: italic; color: var(--cream-40); margin: 10px 0; }
     .adm-msg.err { color: #f5a3a3; }
 
+    .adm-verify { display: flex; gap: 8px; max-width: 420px; }
+    .adm-verify input {
+      flex: 1; min-width: 0;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(201,148,58,0.22);
+      border-radius: 8px; padding: 9px 12px; color: var(--cream);
+      font-family: 'DM Mono', monospace; font-size: 14px; letter-spacing: 0.08em;
+      text-transform: uppercase; outline: none;
+    }
+    .adm-verify input:focus { border-color: var(--gold); }
+    .adm-verify-result {
+      margin-top: 10px; max-width: 420px; font-size: 15px; line-height: 1.5;
+      border-radius: 10px; padding: 0 14px;
+    }
+    .adm-verify-result:empty { display: none; }
+    .adm-verify-result.ok  { padding: 10px 14px; background: rgba(74,222,128,0.08); border: 1px solid rgba(74,222,128,0.35); }
+    .adm-verify-result.bad { padding: 10px 14px; background: rgba(220,60,60,0.08); border: 1px solid rgba(220,60,60,0.35); color: #f5a3a3; }
+
     .adm-stats {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
       gap: 10px; margin-bottom: 24px;
@@ -808,6 +825,13 @@
     </div>
 
     <div class="adm-msg" id="adm-msg"></div>
+
+    <div class="adm-section-title">Verify a claim code</div>
+    <form class="adm-verify" id="adm-verify" autocomplete="off">
+      <input id="adm-code" placeholder="e.g. SFI-7KQ4XM9" maxlength="20" autocapitalize="characters" spellcheck="false" aria-label="Claim code">
+      <button class="adm-btn export" id="adm-verify-btn" type="submit">Check</button>
+    </form>
+    <div class="adm-verify-result" id="adm-verify-result" role="status"></div>
 
     <div class="adm-section-title">Conference days</div>
     <div class="adm-table-wrap">
@@ -1368,6 +1392,13 @@ function participantRows(data) {
       r.result === 'WON' ? 'WON' : 'No win', r.prize, r.code, r.lastSpin]),
   ];
 }
+function winnerRows(data) {
+  return [
+    ['#', 'Name', 'Mobile', 'Prize', 'Claim code', 'Won at (IST)'],
+    ...data.participants.filter(r => r.result === 'WON')
+      .map((r, i) => [i + 1, r.name, r.phone, r.prize, r.code, r.lastSpin]),
+  ];
+}
 function spinRows(data) {
   return [
     ['#', 'Time (IST)', 'Name', 'Mobile', 'Spin #', 'Reel 1', 'Reel 2', 'Reel 3', 'Result', 'Prize', 'Claim code'],
@@ -1407,6 +1438,7 @@ async function downloadExcel(dates, btn) {
       const XLSX = await loadXLSX();
       const wb = XLSX.utils.book_new();
       for (const data of exports) {
+        addSheet(XLSX, wb, winnerRows(data), `${data.date} Winners`);
         addSheet(XLSX, wb, participantRows(data), `${data.date} Players`);
         addSheet(XLSX, wb, spinRows(data), `${data.date} Spins`);
       }
@@ -1424,6 +1456,36 @@ async function downloadExcel(dates, btn) {
   }
 }
 
+async function verifyCode(e) {
+  e.preventDefault();
+  const out  = $('adm-verify-result');
+  const code = $('adm-code').value.trim();
+  if (!code) return;
+  const btn = $('adm-verify-btn');
+  setBusy(btn, true, '…');
+  out.className = 'adm-verify-result';
+  out.textContent = '';
+  try {
+    const r = await adminCall('admin_verify', { code });
+    if (r.valid) {
+      out.className = 'adm-verify-result ok';
+      out.innerHTML = `✅ <strong>Valid</strong> — ${esc(r.code)}<br>${esc(drName(r.name))} · ${esc(r.phone)}<br>` +
+                      `Prize: <strong>${esc(r.prize)}</strong><br><span style="color:var(--cream-40)">Won ${esc(r.issued)} IST</span>`;
+    } else {
+      out.className = 'adm-verify-result bad';
+      out.textContent = r.test
+        ? `⚠️ ${r.code} is a TEST code (${r.prize}) — not a real prize.`
+        : r.reason === 'not_issued'
+          ? `❌ ${r.code} was never issued. Do not give a prize.`
+          : `❌ ${r.code} is not a valid STARFILL code (check for typos).`;
+    }
+  } catch (err) {
+    if (err.message !== 'unauthorized') { out.className = 'adm-verify-result bad'; out.textContent = NETWORK_ERROR; }
+  } finally {
+    setBusy(btn, false);
+  }
+}
+
 function initAdmin() {
   $('screen-register').classList.add('hidden');
   $('admin-panel').classList.remove('hidden');
@@ -1432,6 +1494,7 @@ function initAdmin() {
   $('adm-login').addEventListener('submit', adminLogin);
   $('adm-logout').addEventListener('click', () => adminLogout());
   $('adm-refresh').addEventListener('click', refreshAdmin);
+  $('adm-verify').addEventListener('submit', verifyCode);
   $('adm-dl-all').addEventListener('click', e => downloadExcel(adminDays.map(d => d.date).sort(), e.currentTarget));
   $('adm-days').addEventListener('click', e => {
     const b = e.target.closest('button');
