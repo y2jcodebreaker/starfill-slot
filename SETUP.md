@@ -1,58 +1,73 @@
-# STARFILL Lucky Spin — Central Results Setup
+# STARFILL Lucky Spin — Setup & Event Guide
 
-Follow these steps once to make every spin (from every customer's phone) land in
-one Google Sheet you can open anytime.
+The slot machine (`index.html`, hosted on GitHub Pages) talks to a small
+backend that runs as a Google Apps Script attached to your Google Sheet
+(`google-apps-script.gs`). **The backend decides every spin**, so the rules
+hold on every phone and tablet, including after a reload, in incognito, or on a
+second device:
 
-## 1. Create the Google Sheet
+| Rule | Where to change it (`google-apps-script.gs` → `CONFIG`) |
+|---|---|
+| 3 spins per mobile number per day | `MAX_SPINS_PER_DAY` |
+| A winner can't play again for 24 hours | `WIN_LOCK_HOURS` (set 48 to block winners for the whole 2-day event) |
+| Exactly 2 winners per day, never more | `WINNERS_PER_DAY` |
+| Winners spread over the first ~120 spins (~42 visitors) | `PRIZE_WINDOW_SPINS` |
+| Any prize still left after 16:00 IST goes to the next spin | `LAST_CALL_TIME` (set about 1 hour before the booth closes) |
+| Prize mix when someone wins: PLUS 50%, DEEP+ 30%, IMPLANT+ 20% | `SYMBOLS[].weight` |
 
-1. Go to [sheets.new](https://sheets.new) (signed in with the clinic's Google account)
-2. Rename it something like **STARFILL Spins**
+Every check-in and spin is written to the Google Sheet (tabs **Registrations**
+and **Spins**). The admin page downloads a per-day Excel file.
 
-## 2. Add the script
+---
 
-1. In the sheet, click **Extensions → Apps Script**
-2. Delete any starter code in the editor
-3. Open `google-apps-script.gs` (in this repo), copy everything, paste it in
-4. Click the **Save** icon (💾)
+## 1. Update the Apps Script (keep the same URL)
 
-## 3. Deploy it as a web app
+1. Open the Google Sheet → **Extensions → Apps Script**
+2. Select everything in the editor, delete it, and paste the whole of
+   `google-apps-script.gs` from this repo. Click **Save** 💾
+3. **Set the admin password:** ⚙️ **Project Settings** → scroll to
+   **Script Properties** → **Add script property**
+   - Property: `ADMIN_KEY`
+   - Value: a new password that nobody else knows. Don't reuse `starfill2026`,
+     because it was in the public repo.
+4. **Redeploy without changing the URL:** **Deploy → Manage deployments** →
+   ✏️ (edit) on the existing deployment → **Version: New version** → **Deploy**.
+   (Don't use "New deployment", which gives a new URL.)
+   Keep **Execute as: Me** and **Who has access: Anyone**.
+5. If Google asks you to authorize again, go through **Advanced → Go to (project) → Allow**.
 
-1. Click **Deploy → New deployment**
-2. Click the gear ⚙️ next to "Select type" → choose **Web app**
-3. Set:
-   - **Description:** STARFILL logger
-   - **Execute as:** Me
-   - **Who has access:** **Anyone**  ← important
-4. Click **Deploy**
-5. Click **Authorize access** → pick your Google account → if it warns
-   "Google hasn't verified this app", click **Advanced → Go to (project) → Allow**
-   (it's your own script, this is safe)
-6. Copy the **Web app URL** — it ends in `/exec`
+> First time setting up? Create a sheet at [sheets.new](https://sheets.new),
+> do steps 1–3, then **Deploy → New deployment → Web app** (Execute as **Me**,
+> access **Anyone**), and paste the `/exec` URL into `API_URL` in `index.html`.
 
-## 4. Connect it to the slot machine
+## 2. Test it (before the event)
 
-1. Open `index.html` in this repo
-2. Near the top of the `<script>`, find the `CFG` block:
-   ```javascript
-   WEBHOOK_URL:  '',
-   ```
-3. Paste your `/exec` URL between the quotes:
-   ```javascript
-   WEBHOOK_URL:  'https://script.google.com/macros/s/AKfy.../exec',
-   ```
-4. Save, then push:
-   ```bash
-   git add index.html && git commit -m "chore: connect Google Sheets webhook" && git push origin main
-   ```
+1. Open the live site, check in with your own number, and spin 3 times.
+2. Check in again with the same number. It must say the spins are used up.
+3. Admin: open `https://<your-site>/?admin`, then enter the `ADMIN_KEY` password.
+   You should see today's row, and **⬇ Excel** should download an `.xlsx`.
+4. Optional test win: while signed in to the admin page, change the URL
+   **in the same tab** to `https://<your-site>/?forceWin=implant` and play with
+   a spare number. Test wins show as `TEST WIN` and don't use up a real prize.
 
-## 5. Test
+## 3. Reset before the conference opens ⚠️
 
-1. Open the live site, do one spin
-2. Check the Google Sheet — a new row should appear within a few seconds
+Testing creates real records. Before day 1, in the Apps Script editor, pick
+**`resetAllData`** in the function dropdown and click **Run**. It clears
+all spin counters and archives the test tabs.
 
-That's it. Every spin from any device now logs to this one sheet, with
-timestamp, name, phone, the three reels, win/miss, and the prize won.
+## 4. During the event
 
-> The in-browser admin panel (`?admin=starfill2026`) still works, but it only
-> shows spins from the device you open it on. The Google Sheet is the real,
-> complete record — use that one.
+- **Admin page:** `/?admin`. Shows players, spins and winners per day
+  (e.g. `1 / 2`), with **⬇ Excel** for each day and **Excel — all days**.
+  Each file has a *Players* sheet (name, mobile, spins used, result, prize,
+  claim code) and a *Spins* sheet (every spin).
+- **Verifying a winner:** the winner's screen shows a claim code such as
+  `SFI-48213`. It must match the code in the admin page or Sheet for that mobile.
+- **WhatsApp:** winners tap **Claim on WhatsApp**, which sends their name,
+  mobile and claim code to the office number (+91 99872 64974). Everyone else
+  gets a **Chat with us on WhatsApp** button at the end.
+- **Internet is required.** If the connection drops, the game says so and the
+  player can tap SPIN again. A spin is never lost or counted twice.
+- **Shared booth tablet:** tap **FINISH** (or **EXIT**) to return to the
+  check-in screen for the next visitor.

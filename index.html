@@ -157,6 +157,14 @@
       transform: translateY(-1px);
     }
     .btn-start:active { transform: translateY(0); }
+    .btn-start:disabled { opacity: 0.6; cursor: wait; transform: none; }
+
+    .form-error {
+      min-height: 20px;
+      font-size: 15px; line-height: 1.45;
+      color: #f5a3a3;
+    }
+    .form-error:empty { display: none; }
 
     .reg-note {
       margin-top: 22px;
@@ -185,6 +193,14 @@
       font-size: 15px; font-style: italic; color: var(--cream-40);
     }
     .user-greeting strong { font-style: normal; color: var(--cream-70); font-weight: 600; }
+    .btn-exit {
+      background: none; border: 1px solid var(--frame-b); border-radius: 100px;
+      padding: 4px 12px; margin-left: 10px;
+      font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.12em;
+      color: var(--cream-40); cursor: pointer;
+    }
+    .btn-exit:hover { color: var(--cream); border-color: var(--gold-dk); }
+    .user-right { display: flex; align-items: center; }
 
     .spin-dots { display: flex; align-items: center; gap: 7px; }
     .sdot {
@@ -318,8 +334,15 @@
       display: flex; flex-direction: column;
       transition: transform 0s;
     }
-    .reel-strip.spinning {
-      transition: transform var(--spin-dur, 2s) cubic-bezier(0.23, 1, 0.32, 1);
+    /* Fast loop while waiting for the server's result. Uses the separate
+       `translate` property so it doesn't fight the inline transform. */
+    .reel-strip.prespin {
+      animation: preSpin 0.3s linear infinite;
+      filter: blur(1.5px);
+    }
+    @keyframes preSpin {
+      from { translate: 0 0; }
+      to   { translate: 0 calc(var(--cycle, 240px) * -1); }
     }
 
     /* Each symbol card in the strip */
@@ -409,6 +432,10 @@
       font-family: 'DM Mono', monospace;
       font-size: 8px; color: rgba(6,4,12,0.55);
       letter-spacing: 0.2em;
+    }
+    .spin-msg {
+      min-height: 18px; max-width: 300px; text-align: center;
+      font-size: 14px; font-style: italic; color: #f5a3a3;
     }
 
     /* Machine shake on spin */
@@ -507,7 +534,17 @@
       letter-spacing: 0.08em;
       text-shadow: 0 0 20px rgba(201,148,58,0.4);
     }
-    .disc-hint { font-size: 12px; color: var(--cream-20); margin-top: 10px; font-style: italic; }
+    .disc-hint { font-size: 13px; color: var(--cream-40); margin-top: 10px; font-style: italic; }
+    .disc-code {
+      display: inline-block; margin-top: 14px; padding: 6px 14px;
+      border-radius: 8px; border: 1px solid rgba(201,148,58,0.4);
+      font-family: 'DM Mono', monospace; font-size: 15px; letter-spacing: 0.12em;
+      color: var(--cream);
+    }
+    .disc-code-label {
+      display: block; font-size: 9px; letter-spacing: 0.2em; color: var(--gold);
+      text-transform: uppercase; margin-bottom: 2px;
+    }
 
     .btn-whatsapp {
       width: 100%;
@@ -569,8 +606,27 @@
     }
     .adm-btn.export { background: rgba(201,148,58,0.1); border: 1px solid rgba(201,148,58,0.35); color: var(--gold); }
     .adm-btn.export:hover { background: rgba(201,148,58,0.18); }
-    .adm-btn.clear  { background: rgba(220,60,60,0.08); border: 1px solid rgba(220,60,60,0.3); color: #f88; }
-    .adm-btn.clear:hover { background: rgba(220,60,60,0.15); }
+    .adm-btn.plain  { background: rgba(255,255,255,0.04); border: 1px solid var(--frame-b); color: var(--cream-70); }
+    .adm-btn.plain:hover { background: rgba(255,255,255,0.08); }
+    .adm-btn:disabled { opacity: 0.5; cursor: wait; }
+    .adm-btn.active { border-color: var(--gold); color: var(--gold-lt); }
+
+    .adm-login {
+      max-width: 340px; margin: 12vh auto 0;
+      display: flex; flex-direction: column; gap: 12px; text-align: center;
+    }
+    .adm-login input {
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(201,148,58,0.22);
+      border-radius: 12px; padding: 14px 18px; color: var(--cream);
+      font-family: 'DM Mono', monospace; font-size: 15px; outline: none;
+    }
+    .adm-login input:focus { border-color: var(--gold); }
+    .adm-section-title {
+      font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.14em;
+      text-transform: uppercase; color: var(--gold); margin: 26px 0 10px;
+    }
+    .adm-msg { font-size: 14px; font-style: italic; color: var(--cream-40); margin: 10px 0; }
+    .adm-msg.err { color: #f5a3a3; }
 
     .adm-stats {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
@@ -632,13 +688,14 @@
 
   <div class="reg-pill">◆ &nbsp; 3 Free Spins · Win STARFILL Filler &nbsp; ◆</div>
 
-  <form class="reg-form" id="reg-form" autocomplete="off">
-    <input type="text" id="inp-name" placeholder="Your Name" required autocomplete="off">
-    <input type="tel"  id="inp-phone" placeholder="Phone Number" required autocomplete="off">
-    <button type="submit" class="btn-start">START SPINNING</button>
+  <form class="reg-form" id="reg-form" autocomplete="off" novalidate>
+    <input type="text" id="inp-name" placeholder="Dr. Full Name" maxlength="60" required autocomplete="off" aria-label="Doctor's full name">
+    <input type="tel"  id="inp-phone" placeholder="Mobile Number" maxlength="16" inputmode="tel" required autocomplete="off" aria-label="Mobile number">
+    <div class="form-error" id="reg-error" role="alert"></div>
+    <button type="submit" class="btn-start" id="btn-start">START SPINNING</button>
   </form>
 
-  <p class="reg-note">By spinning you agree to receive your exclusive discount code via this game. No spam.</p>
+  <p class="reg-note">One entry per mobile number. By playing you agree that the STARFILL team may contact you on this number about your prize and our products.</p>
 </div>
 
 <!-- =============================================
@@ -647,10 +704,9 @@
 <div id="screen-machine" class="screen hidden">
   <div class="user-bar">
     <div class="user-greeting">Welcome, <strong id="lbl-name">—</strong></div>
-    <div class="spin-dots" id="spin-dots">
-      <div class="sdot"></div>
-      <div class="sdot"></div>
-      <div class="sdot"></div>
+    <div class="user-right">
+      <div class="spin-dots" id="spin-dots"></div>
+      <button class="btn-exit" id="btn-exit" type="button">EXIT</button>
     </div>
   </div>
 
@@ -663,7 +719,7 @@
         <div class="m-top-line"></div>
       </div>
       <div class="m-title">LUCKY SPIN</div>
-      <div class="m-subtitle">Match all three · Win a discount</div>
+      <div class="m-subtitle">Match all three · Win a free STARFILL product</div>
     </div>
 
     <!-- Lights strip -->
@@ -694,6 +750,7 @@
         <span class="btn-spin-label">SPIN</span>
         <span class="btn-spin-sub">TAP TO PLAY</span>
       </button>
+      <div class="spin-msg" id="spin-msg" role="status"></div>
     </div>
   </div>
 </div>
@@ -711,14 +768,16 @@
     <div id="discount-box" class="discount-box hidden">
       <div class="disc-label">You Have Won</div>
       <div class="disc-product-name" id="disc-product-name">—</div>
-      <div class="disc-hint">Show this screen to our team to claim your prize</div>
+      <div class="disc-code"><span class="disc-code-label">Claim code</span><span id="disc-code">—</span></div>
+      <div class="disc-hint">Show this screen at the STARFILL booth to claim your prize</div>
     </div>
 
     <button class="btn-whatsapp hidden" id="btn-share">
       <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-      Share on WhatsApp
+      <span id="btn-share-label">Claim on WhatsApp</span>
     </button>
     <button class="btn-again" id="btn-again">SPIN AGAIN</button>
+    <button class="btn-done hidden" id="btn-done">FINISH</button>
     <div class="spins-left-note" id="spins-left-note"></div>
   </div>
 </div>
@@ -727,36 +786,47 @@
      ADMIN PANEL
 ============================================= -->
 <div id="admin-panel" class="hidden">
-  <div class="adm-hdr">
-    <div>
-      <div class="adm-title">STARFILL — Admin Dashboard</div>
-      <div class="adm-subtitle">All spin results across all users</div>
-    </div>
-    <div class="adm-actions">
-      <button class="adm-btn export" onclick="exportCSV()">⬇ Export CSV</button>
-      <button class="adm-btn clear"  onclick="clearAll()">✕ Clear All</button>
-    </div>
-  </div>
+  <form class="adm-login" id="adm-login">
+    <div class="adm-title">STARFILL — Admin</div>
+    <input type="password" id="adm-key" placeholder="Admin key" autocomplete="current-password" aria-label="Admin key">
+    <button type="submit" class="btn-start" id="adm-login-btn">SIGN IN</button>
+    <div class="form-error" id="adm-login-error" role="alert"></div>
+  </form>
 
-  <div class="adm-stats" id="adm-stats"></div>
+  <div id="adm-main" class="hidden">
+    <div class="adm-hdr">
+      <div>
+        <div class="adm-title">STARFILL — Admin Dashboard</div>
+        <div class="adm-subtitle">Live results from every device</div>
+      </div>
+      <div class="adm-actions">
+        <button class="adm-btn plain" id="adm-refresh">↻ Refresh</button>
+        <button class="adm-btn export" id="adm-dl-all">⬇ Excel — all days</button>
+        <a class="adm-btn plain hidden" id="adm-sheet-link" target="_blank" rel="noopener" style="text-decoration:none">Open Google Sheet ↗</a>
+        <button class="adm-btn plain" id="adm-logout">Sign out</button>
+      </div>
+    </div>
 
-  <div class="adm-table-wrap">
-    <table class="adm-table" id="adm-table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Date / Time</th>
-          <th>Name</th>
-          <th>Phone</th>
-          <th>Reel 1</th>
-          <th>Reel 2</th>
-          <th>Reel 3</th>
-          <th>Result</th>
-          <th>Discount Code</th>
-        </tr>
-      </thead>
-      <tbody id="adm-tbody"></tbody>
-    </table>
+    <div class="adm-msg" id="adm-msg"></div>
+
+    <div class="adm-section-title">Conference days</div>
+    <div class="adm-table-wrap">
+      <table class="adm-table" style="min-width:520px">
+        <thead><tr><th>Date</th><th>Players</th><th>Spins</th><th>Winners</th><th></th></tr></thead>
+        <tbody id="adm-days"></tbody>
+      </table>
+    </div>
+
+    <div class="adm-section-title" id="adm-day-title"></div>
+    <div class="adm-stats" id="adm-stats"></div>
+    <div class="adm-table-wrap">
+      <table class="adm-table">
+        <thead>
+          <tr><th>#</th><th>Name</th><th>Mobile</th><th>Checked in</th><th>Spins</th><th>Result</th><th>Prize</th><th>Claim code</th></tr>
+        </thead>
+        <tbody id="adm-tbody"></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
@@ -766,66 +836,41 @@
 <script>
 // ─────────────────────────────────────────────
 // CONFIG — edit these to customise the game
+// Game rules (spins per mobile, winners per day, win lock) live in
+// google-apps-script.gs: the server decides every spin.
 // ─────────────────────────────────────────────
 const CFG = {
-  ADMIN_KEY:    'starfill2026',   // URL param: ?admin=starfill2026
-  MAX_SPINS:    3,                // spins per session
-  WEBHOOK_URL:  'https://script.google.com/macros/s/AKfycbwfEy3VmbieKm04hr5UsBtOeVrAXRAwwTnonPGMvg9R_vubwh5Q_HeKTMw8G32i/exec',
-  WHATSAPP_NUM: '919987264974',   // your WhatsApp number for prize claim
+  API_URL:      'https://script.google.com/macros/s/AKfycbwwA9oznm3-wHuXY3_cLfefLZLOJG5d6HO3LazhzFFLDobz9USquSLxAp5iEHjd3j00/exec',
+  WHATSAPP_NUM: '919987264974',   // office WhatsApp: +91 99872 64974
+  SHEET_URL:    '',               // optional: Google Sheet link shown in the admin panel
+  XLSX_LIB:     'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+  TIMEZONE:     'Asia/Kolkata',
 };
 
 // ─────────────────────────────────────────────
-// SYMBOLS
+// SYMBOLS (display only — odds are decided on the server)
 // ─────────────────────────────────────────────
 const SYMBOLS = [
-  {
-    id: 'plus', cls: 's-plus',
-    star: '★', l1: 'STARFILL', l2: 'PLUS',
-    label: 'STARFILL PLUS',
-    weight: 5, discount: 10, prefix: 'SF-PLUS',
-    color: '#d4a53a',
-  },
-  {
-    id: 'deep', cls: 's-deep',
-    star: '★★', l1: 'STARFILL', l2: 'DEEP+',
-    label: 'STARFILL DEEP PLUS',
-    weight: 3, discount: 20, prefix: 'SF-DEEP',
-    color: '#b060c0',
-  },
-  {
-    id: 'implant', cls: 's-implant',
-    star: '★★★', l1: 'STARFILL', l2: 'IMPLANT+',
-    label: 'STARFILL IMPLANT PLUS',
-    weight: 2, discount: 30, prefix: 'SFI-VIP',
-    color: '#38c0d8',
-  },
+  { id: 'plus',    cls: 's-plus',    star: '★',   l1: 'STARFILL', l2: 'PLUS',     label: 'STARFILL PLUS' },
+  { id: 'deep',    cls: 's-deep',    star: '★★',  l1: 'STARFILL', l2: 'DEEP+',    label: 'STARFILL DEEP PLUS' },
+  { id: 'implant', cls: 's-implant', star: '★★★', l1: 'STARFILL', l2: 'IMPLANT+', label: 'STARFILL IMPLANT PLUS' },
 ];
-
-// Total weight pool
-const TOTAL_W = SYMBOLS.reduce((s, x) => s + x.weight, 0);
 
 // ─────────────────────────────────────────────
 // STATE
 // ─────────────────────────────────────────────
-let userName  = '';
-let userPhone = '';
-let spinsLeft = CFG.MAX_SPINS;
-let spinning  = false;
-let lastResult = null; // {reels, won, code}
+let userName      = '';
+let userPhone     = '';
+let spinsLeft     = 0;
+let maxSpins      = 3;
+let spinning      = false;
+let pendingSpinId = null;  // reused on retry so a lost response never costs a spin
+
+const $ = id => document.getElementById(id);
 
 // ─────────────────────────────────────────────
 // UTILITIES
 // ─────────────────────────────────────────────
-function weightedRandom() {
-  let r = Math.random() * TOTAL_W;
-  for (const s of SYMBOLS) { r -= s.weight; if (r <= 0) return s; }
-  return SYMBOLS[0];
-}
-
-function randCode(prefix) {
-  return prefix + '-' + Math.floor(1000 + Math.random() * 9000);
-}
-
 // Escape user-supplied text before inserting into HTML (prevents stored XSS in admin)
 function esc(str) {
   return String(str ?? '').replace(/[&<>"']/g, c => (
@@ -833,6 +878,74 @@ function esc(str) {
   ));
 }
 
+// Accepts "98765 43210", "+91 98765-43210", "09876543210" → "9876543210" (same rule as the server)
+function normalizePhone(raw) {
+  let d = String(raw || '').replace(/\D/g, '');
+  if (d.length === 12 && d.startsWith('91')) d = d.slice(2);
+  else if (d.length === 11 && d.startsWith('0')) d = d.slice(1);
+  return /^[6-9]\d{9}$/.test(d) ? d : null;
+}
+
+// "Dr. Mehta", "dr mehta", "Mehta" → "Dr. Mehta"
+function drName(name) {
+  return 'Dr. ' + String(name).replace(/^dr\.?\s+|^dr\.\s*/i, '');
+}
+
+function newId() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+function fmtDateTime(ms) {
+  return new Date(ms).toLocaleString('en-IN', {
+    timeZone: CFG.TIMEZONE, day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit',
+  });
+}
+
+function ssGet(k)    { try { return sessionStorage.getItem(k); } catch { return null; } }
+function ssSet(k, v) { try { sessionStorage.setItem(k, v); } catch { /* private mode */ } }
+function ssDel(k)    { try { sessionStorage.removeItem(k); } catch { /* private mode */ } }
+
+function setBusy(btn, busy, label) {
+  if (busy) { btn.dataset.label = btn.textContent; btn.textContent = label; }
+  else if (btn.dataset.label) { btn.textContent = btn.dataset.label; }
+  btn.disabled = busy;
+}
+
+// ─────────────────────────────────────────────
+// SERVER API
+// text/plain body keeps this a "simple" CORS request (no preflight), and the
+// Apps Script response is readable because it's served with ACAO: *.
+// ─────────────────────────────────────────────
+async function api(action, payload = {}) {
+  const ctrl  = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 20000);
+  try {
+    const res = await fetch(CFG.API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action, ...payload }),
+      signal: ctrl.signal,
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+const ERRORS = {
+  invalid_phone: 'Please enter a valid 10-digit Indian mobile number.',
+  invalid_name:  'Please enter your name.',
+  busy:          'The game is busy right now — please try again in a moment.',
+  server_error:  'Something went wrong on our side — please try again.',
+};
+const NETWORK_ERROR = 'Could not reach the server. Please check the internet connection and try again.';
+function errorText(code) { return ERRORS[code] || ERRORS.server_error; }
+
+// ─────────────────────────────────────────────
+// REELS
+// ─────────────────────────────────────────────
 function symCard(s) {
   return `<div class="sym ${s.cls}">
     <div class="sym-star">${s.star}</div>
@@ -841,428 +954,502 @@ function symCard(s) {
   </div>`;
 }
 
-// Build a strip of N * all-symbols + extra tail
-const STRIP_REPEATS = 30; // how many full loops in the strip
-function buildStrip(reelIdx) {
-  const strip = document.getElementById('strip-' + reelIdx);
-  let html = '';
-  for (let i = 0; i < STRIP_REPEATS; i++) {
-    for (const s of SYMBOLS) html += symCard(s);
-  }
-  strip.innerHTML = html;
-  // Start positioned at middle of strip to allow scrolling in both directions
-  const itemH = getItemH();
-  const totalH = itemH * SYMBOLS.length * STRIP_REPEATS;
-  // Park near bottom-middle so we can only scroll down
-  const initPos = Math.floor(STRIP_REPEATS / 2) * SYMBOLS.length * itemH;
-  strip.style.transform = `translateY(-${initPos}px)`;
-  strip.dataset.pos = initPos;
+const STRIP_REPEATS = 40; // full symbol loops in each strip (enough for the longest spin)
+
+function reelMetrics(reelIdx) {
+  const strip = $('strip-' + reelIdx);
+  return {
+    strip,
+    itemH: strip.firstElementChild.getBoundingClientRect().height,
+    reelH: $('reel-' + reelIdx).clientHeight,
+  };
 }
 
-function getItemH() {
-  return window.innerWidth <= 380 ? 70 : 80;
+// Resting position: a whole number of symbol loops, near the middle of the strip
+function restPos(itemH) {
+  return Math.floor(STRIP_REPEATS / 2) * SYMBOLS.length * itemH;
 }
 
-function getReelH() {
-  return window.innerWidth <= 380 ? 210 : 240;
-}
-
-// ─────────────────────────────────────────────
-// SPIN ANIMATION
-// Each reel scrolls to show the target symbol in the center
-// Center of reel = reelH / 2 = 120px from top
-// Center of item at index i in strip = (initPos + scroll) * -1
-// ─────────────────────────────────────────────
-function spinReel(reelIdx, targetSymbol, duration, callback) {
-  const strip = document.getElementById('strip-' + reelIdx);
-  const itemH = getItemH();
-  const reelH = getReelH();
-  const currentPos = parseFloat(strip.dataset.pos || 0);
-
-  // Find next occurrence of targetSymbol well ahead in strip
-  const symIdx = SYMBOLS.findIndex(s => s.id === targetSymbol.id);
-  // We want several full rotations before landing
-  const extraRotations = 8 + reelIdx * 3; // more rotations for later reels
-  const extraItems = extraRotations * SYMBOLS.length + symIdx;
-  const newPos = currentPos + extraItems * itemH;
-
-  // The center of the target item should be at reelH/2 from the top of the reel
-  // translateY = -(newPos) puts newPos px off-screen; center of item = newPos + itemH/2
-  // We want: reelH/2 = itemH * symIdx + itemH/2 within the visible block
-  // Adjustment to land item in exact center:
-  const centerAdj = reelH / 2 - itemH / 2;
-  const finalPos  = newPos - centerAdj;
-
+function parkStrip(reelIdx) {
+  const { strip, itemH, reelH } = reelMetrics(reelIdx);
   strip.style.transition = 'none';
-  strip.style.transform  = `translateY(-${currentPos}px)`;
+  strip.style.transform  = `translateY(-${restPos(itemH) - (reelH / 2 - itemH * 1.5)}px)`;
+  strip.style.setProperty('--cycle', (itemH * SYMBOLS.length) + 'px');
+}
+
+function buildStrips() {
+  [0, 1, 2].forEach(i => {
+    let html = '';
+    for (let r = 0; r < STRIP_REPEATS; r++) for (const s of SYMBOLS) html += symCard(s);
+    $('strip-' + i).innerHTML = html;
+    parkStrip(i);
+  });
+}
+
+function startPreSpin() {
+  [0, 1, 2].forEach(i => { parkStrip(i); $('strip-' + i).classList.add('prespin'); });
+}
+function stopPreSpin() {
+  [0, 1, 2].forEach(i => $('strip-' + i).classList.remove('prespin'));
+}
+
+// Scroll a reel so targetSymbol lands centred on the payline
+function spinReel(reelIdx, targetSymbol, duration, callback) {
+  const { strip, itemH, reelH } = reelMetrics(reelIdx);
+  const symIdx = SYMBOLS.findIndex(s => s.id === targetSymbol.id);
+  const extraRotations = 8 + reelIdx * 3; // later reels spin longer
+  const landing  = restPos(itemH) + (extraRotations * SYMBOLS.length + symIdx) * itemH;
+  const finalPos = landing - (reelH / 2 - itemH / 2);
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      strip.style.setProperty('--spin-dur', duration + 'ms');
-      strip.classList.add('spinning');
       strip.style.transition = `transform ${duration}ms cubic-bezier(0.18, 0.89, 0.32, 1)`;
       strip.style.transform  = `translateY(-${finalPos}px)`;
-      strip.dataset.pos = finalPos;
     });
   });
-
-  setTimeout(() => {
-    strip.classList.remove('spinning');
-    callback();
-  }, duration + 50);
+  setTimeout(callback, duration + 50);
 }
 
 // ─────────────────────────────────────────────
 // SPIN LOGIC
 // ─────────────────────────────────────────────
-function doSpin() {
+function setSpinButton(enabled, sub) {
+  const btn = $('btn-spin');
+  btn.disabled = !enabled;
+  btn.querySelector('.btn-spin-sub').textContent = sub;
+}
+
+async function doSpin() {
   if (spinning || spinsLeft <= 0) return;
   spinning = true;
-  document.getElementById('btn-spin').disabled = true;
+  setSpinButton(false, 'SPINNING…');
+  $('spin-msg').textContent = '';
 
-  // Determine results — ?forceWin=plus|deep|implant works ONLY with the admin key
-  // (e.g. ?admin=starfill2026&forceWin=implant) so the public can't exploit it
-  const params   = new URLSearchParams(location.search);
-  const isAdmin  = params.get('admin') === CFG.ADMIN_KEY;
-  const forceWin = isAdmin ? params.get('forceWin') : null;
-  const forcedSym = forceWin ? SYMBOLS.find(s => s.id === forceWin) : null;
-  const results = forcedSym
-    ? [forcedSym, forcedSym, forcedSym]
-    : [weightedRandom(), weightedRandom(), weightedRandom()];
-
-  // Machine shake
-  const mach = document.getElementById('machine');
+  const mach = $('machine');
   mach.classList.add('shaking');
   setTimeout(() => mach.classList.remove('shaking'), 400);
+  startPreSpin();
 
-  // Spin durations — each reel stops sequentially
+  // Test wins: ?forceWin=plus|deep|implant, only honoured by the server
+  // when this browser is signed in to the admin panel.
+  const forceWin = new URLSearchParams(location.search).get('forceWin');
+  pendingSpinId = pendingSpinId || newId();
+
+  let res;
+  try {
+    res = await api('spin', {
+      phone: userPhone, spinId: pendingSpinId,
+      ...(forceWin ? { forceWin, adminKey: ssGet('sf_admin_key') || '' } : {}),
+    });
+  } catch {
+    return spinFailed('Connection problem — tap SPIN to try again.');
+  }
+
+  if (!res.ok) {
+    if (res.error === 'no_spins' || res.error === 'won_locked') {
+      spinsLeft = 0;
+      updateDots();
+      return spinFailed('This mobile number has no spins left today.', true);
+    }
+    if (res.error === 'not_registered') {
+      spinFailed('Your session has expired — please check in again.', true);
+      setTimeout(resetToStart, 2500);
+      return;
+    }
+    return spinFailed(errorText(res.error) + ' Tap SPIN to retry.');
+  }
+
+  pendingSpinId = null;
+  stopPreSpin();
+  const results   = res.reels.map(id => SYMBOLS.find(s => s.id === id));
   const durations = [1600, 2100, 2700];
   let stopped = 0;
-
   results.forEach((sym, i) => {
     spinReel(i, sym, durations[i], () => {
-      stopped++;
-      if (stopped === results.length) onSpinComplete(results);
+      if (++stopped === results.length) onSpinComplete(results, res);
     });
   });
 }
 
-function resetStrips() {
-  const itemH   = getItemH();
-  const initPos = Math.floor(STRIP_REPEATS / 2) * SYMBOLS.length * itemH;
-  [0,1,2].forEach(i => {
-    const strip = document.getElementById('strip-' + i);
-    if (!strip) return;
-    strip.style.transition = 'none';
-    strip.style.transform  = `translateY(-${initPos}px)`;
-    strip.dataset.pos      = initPos;
-  });
+function spinFailed(msg, final = false) {
+  stopPreSpin();
+  [0, 1, 2].forEach(parkStrip);
+  spinning = false;
+  $('spin-msg').textContent = msg;
+  if (final) setSpinButton(false, 'NO SPINS LEFT');
+  else setSpinButton(true, 'TAP TO RETRY');
 }
 
-function onSpinComplete(results) {
-  spinning = false;
-  spinsLeft--;
+function onSpinComplete(results, res) {
+  spinning  = false;
+  spinsLeft = res.spinsLeft;
   updateDots();
 
-  // Persist spin count so reloading doesn't reset it
-  const spinsUsed = CFG.MAX_SPINS - spinsLeft;
-  saveUserSpins(userPhone, serverDate, spinsUsed);
-
-  // Reset strips to start position while overlay covers screen
-  setTimeout(resetStrips, 300);
-
-  const won = results[0].id === results[1].id && results[1].id === results[2].id;
-  let code = null;
-  if (won) {
-    code = randCode(results[0].prefix);
+  if (res.won) {
     results.forEach((_, i) => {
-      setTimeout(() => {
-        document.getElementById('reel-' + i).classList.add('win-flash');
-      }, i * 120);
+      setTimeout(() => $('reel-' + i).classList.add('win-flash'), i * 120);
     });
     setTimeout(launchConfetti, 400);
   }
-
-  // Build result object
-  lastResult = { reels: results, won, code, discount: won ? results[0].discount : 0 };
-
-  // Log to localStorage
-  logSpin({ name: userName, phone: userPhone, reels: results, won, code });
-
-  // Webhook (fire-and-forget). no-cors + text/plain makes this a "simple"
-  // opaque request: the browser sends the POST without trying to read the
-  // cross-origin redirect response, so it reaches Google Apps Script reliably.
-  if (CFG.WEBHOOK_URL) {
-    fetch(CFG.WEBHOOK_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({
-        name: userName, phone: userPhone,
-        timestamp: new Date().toISOString(),
-        reel1: results[0].label, reel2: results[1].label, reel3: results[2].label,
-        won, code: code || '',
-      })
-    }).catch(() => {});
-  }
-
-  setTimeout(() => showResult(results, won, code), 600);
+  setTimeout(() => showResult(res), 600);
 }
 
 // ─────────────────────────────────────────────
 // RESULT OVERLAY
 // ─────────────────────────────────────────────
-function showResult(results, won, code) {
-  const card    = document.getElementById('res-card');
-  const overlay = document.getElementById('overlay');
+function openWhatsApp(text) {
+  window.open(`https://wa.me/${CFG.WHATSAPP_NUM}?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+}
 
-  document.getElementById('res-icon').textContent  = won ? '🎉' : '🎰';
-  const titleEl = document.getElementById('res-title');
-  const descEl  = document.getElementById('res-desc');
+function showResult(res) {
+  const won      = res.won;
+  const titleEl  = $('res-title');
+  const descEl   = $('res-desc');
+  const shareBtn = $('btn-share');
+  const againBtn = $('btn-again');
+  const doneBtn  = $('btn-done');
+  const noteEl   = $('spins-left-note');
+
+  $('res-icon').textContent = won ? '🎉' : '🎰';
   titleEl.className = 'res-title ' + (won ? 'win' : 'lose');
-  card.className    = 'res-card ' + (won ? 'win' : '');
+  $('res-card').className = 'res-card ' + (won ? 'win' : '');
+  $('discount-box').classList.toggle('hidden', !won);
 
   if (won) {
     titleEl.textContent = 'JACKPOT!';
-    descEl.textContent  = `All three match — you've won a free ${results[0].label}!`;
-  } else {
-    titleEl.textContent = 'Not This Time';
-    descEl.textContent  = spinsLeft > 0
-      ? `Keep spinning — you have ${spinsLeft} spin${spinsLeft > 1 ? 's' : ''} left!`
-      : 'Better luck next time. Thanks for playing!';
-  }
-
-  // Reel chips — hidden (kept in DOM for future use, no content)
-  document.getElementById('res-reels').innerHTML = '';
-
-  // Win prize box
-  const dBox = document.getElementById('discount-box');
-  const shareBtn = document.getElementById('btn-share');
-  if (won) {
-    document.getElementById('disc-product-name').textContent = results[0].label;
-    dBox.classList.remove('hidden');
+    descEl.textContent  = `Congratulations ${drName(userName)} — all three match!`;
+    $('disc-product-name').textContent = 'FREE ' + res.prize;
+    $('disc-code').textContent = res.code;
+    $('btn-share-label').textContent = 'Claim on WhatsApp';
+    shareBtn.onclick = () => openWhatsApp(
+      `Hi! I just won a FREE ${res.prize} on the STARFILL Lucky Spin 🎉\n` +
+      `Name: ${drName(userName)}\nMobile: ${userPhone}\nClaim code: ${res.code}`);
     shareBtn.classList.remove('hidden');
-
-    // WhatsApp share
-    const waText = encodeURIComponent(`Hi! I just won Free ${results[0].label} on the STARFILL Lucky Spin! 🎉\nName: ${userName}\nPhone: ${userPhone}`);
-    shareBtn.onclick = () => window.open(`https://wa.me/${CFG.WHATSAPP_NUM}?text=${waText}`, '_blank');
-  } else {
-    dBox.classList.add('hidden');
+  } else if (spinsLeft > 0) {
+    titleEl.textContent = 'Not This Time';
+    descEl.textContent  = `So close! You have ${spinsLeft} spin${spinsLeft > 1 ? 's' : ''} left.`;
     shareBtn.classList.add('hidden');
-  }
-
-  // Spin again button
-  const againBtn = document.getElementById('btn-again');
-  const noteEl   = document.getElementById('spins-left-note');
-  if (spinsLeft > 0) {
-    againBtn.textContent = 'SPIN AGAIN';
-    againBtn.classList.remove('hidden');
-    noteEl.textContent = `${spinsLeft} spin${spinsLeft > 1 ? 's' : ''} remaining`;
   } else {
-    againBtn.textContent = 'NO MORE SPINS';
-    againBtn.disabled = true;
-    noteEl.textContent = 'You\'ve used all your spins. Thanks for playing!';
+    titleEl.textContent = 'Thanks for Playing';
+    descEl.textContent  = `No match this time, ${drName(userName)}. Visit the STARFILL booth to explore our range.`;
+    $('btn-share-label').textContent = 'Chat with us on WhatsApp';
+    shareBtn.onclick = () => openWhatsApp(
+      `Hi, I'm ${drName(userName)} (mobile ${userPhone}). I played the STARFILL Lucky Spin ` +
+      `and would like to know more about STARFILL products.`);
+    shareBtn.classList.remove('hidden');
   }
 
-  overlay.classList.remove('hidden');
+  const more = !won && spinsLeft > 0;
+  againBtn.classList.toggle('hidden', !more);
+  doneBtn.classList.toggle('hidden', more);
+  noteEl.textContent = more
+    ? `${spinsLeft} spin${spinsLeft > 1 ? 's' : ''} remaining`
+    : won ? `Prize claimed for ${userPhone}` : 'You\'ve used all your spins for today.';
+
+  $('overlay').classList.remove('hidden');
 }
 
 function closeOverlay() {
-  document.getElementById('overlay').classList.add('hidden');
-  // Remove win flash
+  $('overlay').classList.add('hidden');
   document.querySelectorAll('.reel').forEach(r => r.classList.remove('win-flash'));
-  if (spinsLeft > 0) {
-    document.getElementById('btn-spin').disabled = false;
-  } else {
-    document.getElementById('btn-spin').disabled = true;
-    document.getElementById('btn-spin').querySelector('.btn-spin-sub').textContent = 'NO SPINS LEFT';
-  }
+  setSpinButton(spinsLeft > 0, spinsLeft > 0 ? 'TAP TO PLAY' : 'NO SPINS LEFT');
 }
 
-document.getElementById('btn-again').addEventListener('click', closeOverlay);
+// Back to the check-in screen for the next visitor (shared booth device)
+function resetToStart() {
+  $('overlay').classList.add('hidden');
+  document.querySelectorAll('.reel').forEach(r => r.classList.remove('win-flash'));
+  $('screen-machine').classList.add('hidden');
+  $('screen-register').classList.remove('hidden');
+  $('reg-form').reset();
+  $('reg-error').textContent = '';
+  $('spin-msg').textContent  = '';
+  userName = userPhone = '';
+  spinsLeft = 0;
+  spinning = false;
+  pendingSpinId = null;
+}
 
 // ─────────────────────────────────────────────
 // SPIN DOTS
 // ─────────────────────────────────────────────
 function updateDots() {
-  const dots = document.querySelectorAll('.sdot');
-  const used = CFG.MAX_SPINS - spinsLeft;
-  dots.forEach((d, i) => {
-    d.classList.toggle('used', i < used);
-  });
+  const used = maxSpins - spinsLeft;
+  $('spin-dots').innerHTML = Array.from({ length: maxSpins },
+    (_, i) => `<div class="sdot${i < used ? ' used' : ''}"></div>`).join('');
 }
 
 // ─────────────────────────────────────────────
-// REGISTRATION
+// REGISTRATION — the server checks the mobile number
 // ─────────────────────────────────────────────
-// ─────────────────────────────────────────────
-// SERVER DATE — fetch from public API so device clock can't be manipulated
-// ─────────────────────────────────────────────
-async function fetchServerDate() {
-  try {
-    const res  = await fetch('https://worldtimeapi.org/api/timezone/Asia/Kolkata', { cache: 'no-store' });
-    const data = await res.json();
-    // datetime is like "2026-05-04T10:30:00.000+05:30"
-    return data.datetime.slice(0, 10); // "YYYY-MM-DD"
-  } catch {
-    // Fallback to device date only if API unreachable
-    return new Date().toISOString().slice(0, 10);
-  }
-}
-
-// ─────────────────────────────────────────────
-// PER-PHONE SPIN STATE — persists across reloads
-// ─────────────────────────────────────────────
-function userKey(phone) { return 'sf_user_' + phone.replace(/\D/g, ''); }
-
-function loadUserSpins(phone, serverDate) {
-  try {
-    const raw  = localStorage.getItem(userKey(phone));
-    if (!raw) return CFG.MAX_SPINS; // first time
-    const data = JSON.parse(raw);
-    // If stored date != today (server date), reset
-    if (data.date !== serverDate) return CFG.MAX_SPINS;
-    return Math.max(0, CFG.MAX_SPINS - (data.spinsUsed || 0));
-  } catch { return CFG.MAX_SPINS; }
-}
-
-function saveUserSpins(phone, serverDate, spinsUsedTotal) {
-  localStorage.setItem(userKey(phone), JSON.stringify({ date: serverDate, spinsUsed: spinsUsedTotal }));
-}
-
-let serverDate = ''; // set on registration
-
-// ─────────────────────────────────────────────
-// REGISTRATION
-// ─────────────────────────────────────────────
-document.getElementById('reg-form').addEventListener('submit', async e => {
+async function onRegister(e) {
   e.preventDefault();
-  const nameVal  = document.getElementById('inp-name').value.trim().slice(0, 60);
-  const phoneVal = document.getElementById('inp-phone').value.trim().slice(0, 20);
-  if (!nameVal || !phoneVal) return;
+  const errEl = $('reg-error');
+  const name  = $('inp-name').value.replace(/\s+/g, ' ').trim().slice(0, 60);
+  const phone = normalizePhone($('inp-phone').value);
+  if (!name)  { errEl.textContent = ERRORS.invalid_name;  return; }
+  if (!phone) { errEl.textContent = ERRORS.invalid_phone; return; }
+  errEl.textContent = '';
 
-  // Validate phone: must contain exactly 10 digits (Indian mobile),
-  // ignoring spaces, dashes, or a leading +91 / 0
-  const digits = phoneVal.replace(/\D/g, '').replace(/^(91|0)/, '');
-  if (digits.length !== 10) {
-    alert('Please enter a valid 10-digit mobile number.');
+  const btn = $('btn-start');
+  setBusy(btn, true, 'CHECKING…');
+  let res;
+  try {
+    res = await api('register', { name, phone });
+  } catch {
+    errEl.textContent = NETWORK_ERROR;
+    return;
+  } finally {
+    setBusy(btn, false);
+  }
+
+  if (!res.ok) { errEl.textContent = errorText(res.error); return; }
+  if (res.status === 'won_locked') {
+    errEl.textContent = `This mobile number has already won a prize 🎉 It can play again after ${fmtDateTime(res.lockedUntil)}.`;
+    return;
+  }
+  if (res.status === 'no_spins') {
+    errEl.textContent = 'This mobile number has already used all its spins for today. Thank you for playing!';
     return;
   }
 
-  // Disable button while fetching date
-  const btn = document.querySelector('.btn-start');
-  btn.textContent = 'Checking...';
-  btn.disabled = true;
+  userName  = res.name;
+  userPhone = phone;
+  spinsLeft = res.spinsLeft;
+  maxSpins  = res.maxSpins || 3;
 
-  serverDate = await fetchServerDate();
-  const remaining = loadUserSpins(digits, serverDate);
-
-  btn.textContent = 'START SPINNING';
-  btn.disabled = false;
-
-  if (remaining <= 0) {
-    alert(`You've used all your free spins for today.\n\nCome back tomorrow for 3 new free spins! 🎰`);
-    return;
-  }
-
-  userName  = nameVal;
-  userPhone = digits; // normalized 10-digit form (consistent daily-limit key)
-  spinsLeft = remaining;
-
-  document.getElementById('lbl-name').textContent = userName;
-  document.getElementById('screen-register').classList.add('hidden');
-  document.getElementById('screen-machine').classList.remove('hidden');
-
-  [0,1,2].forEach(i => buildStrip(i));
+  $('lbl-name').textContent = drName(userName);
+  $('screen-register').classList.add('hidden');
+  $('screen-machine').classList.remove('hidden');
+  buildStrips();
   updateDots();
-});
-
-document.getElementById('btn-spin').addEventListener('click', doSpin);
-
-// ─────────────────────────────────────────────
-// LOCALSTORAGE LOGGING
-// ─────────────────────────────────────────────
-const LS_KEY = 'sf_spins';
-
-function logSpin(entry) {
-  const all = getAll();
-  all.push({
-    ts:     new Date().toISOString(),
-    name:   entry.name,
-    phone:  entry.phone,
-    r1:     entry.reels[0].label,
-    r2:     entry.reels[1].label,
-    r3:     entry.reels[2].label,
-    won:    entry.won,
-    code:   entry.code || '',
-  });
-  localStorage.setItem(LS_KEY, JSON.stringify(all));
-}
-
-function getAll() {
-  try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch { return []; }
+  setSpinButton(true, 'TAP TO PLAY');
 }
 
 // ─────────────────────────────────────────────
-// ADMIN PANEL
+// ADMIN PANEL — ?admin
 // ─────────────────────────────────────────────
-function renderAdmin() {
-  const all   = getAll();
-  const total = all.length;
-  const wins  = all.filter(r => r.won).length;
-  const uniq  = new Set(all.map(r => r.phone)).size;
+let adminKey  = '';
+let adminDays = [];
+const exportCache = {};
 
-  document.getElementById('adm-stats').innerHTML = `
-    <div class="adm-stat"><div class="adm-stat-n">${total}</div><div class="adm-stat-l">Total Spins</div></div>
-    <div class="adm-stat"><div class="adm-stat-n">${wins}</div><div class="adm-stat-l">Winners</div></div>
-    <div class="adm-stat"><div class="adm-stat-n">${uniq}</div><div class="adm-stat-l">Unique Users</div></div>
-    <div class="adm-stat"><div class="adm-stat-n">${total ? Math.round(wins/total*100) : 0}%</div><div class="adm-stat-l">Win Rate</div></div>
-  `;
+async function adminCall(action, payload = {}) {
+  const res = await api(action, { adminKey, ...payload });
+  if (!res.ok && res.error === 'unauthorized') { adminLogout('Admin key rejected. Please sign in again.'); throw new Error('unauthorized'); }
+  if (!res.ok) throw new Error(res.error);
+  return res;
+}
 
-  const tbody = document.getElementById('adm-tbody');
-  if (!all.length) {
-    tbody.innerHTML = `<tr><td colspan="9" class="adm-empty">No spins recorded yet.</td></tr>`;
-    return;
+function adminMsg(text, isErr = false) {
+  const el = $('adm-msg');
+  el.textContent = text;
+  el.className = 'adm-msg' + (isErr ? ' err' : '');
+}
+
+async function adminLogin(e) {
+  e.preventDefault();
+  const key = $('adm-key').value.trim();
+  if (!key) return;
+  const btn = $('adm-login-btn');
+  setBusy(btn, true, 'CHECKING…');
+  try {
+    const res = await api('admin_days', { adminKey: key });
+    if (!res.ok) { $('adm-login-error').textContent = res.error === 'unauthorized' ? 'Wrong admin key.' : errorText(res.error); return; }
+    adminKey = key;
+    ssSet('sf_admin_key', key);
+    showAdminMain(res);
+  } catch {
+    $('adm-login-error').textContent = NETWORK_ERROR;
+  } finally {
+    setBusy(btn, false);
   }
-  tbody.innerHTML = [...all].reverse().map((r, i) => `
+}
+
+function adminLogout(msg = '') {
+  adminKey = '';
+  ssDel('sf_admin_key');
+  $('adm-main').classList.add('hidden');
+  $('adm-login').classList.remove('hidden');
+  $('adm-login-error').textContent = msg;
+}
+
+function showAdminMain(daysRes) {
+  $('adm-login').classList.add('hidden');
+  $('adm-main').classList.remove('hidden');
+  renderDays(daysRes);
+  const first = adminDays.find(d => d.date === daysRes.today) || adminDays[0];
+  if (first) viewDay(first.date);
+  else { $('adm-day-title').textContent = ''; $('adm-stats').innerHTML = ''; $('adm-tbody').innerHTML = ''; }
+}
+
+function renderDays(res) {
+  adminDays = res.days;
+  const target = res.winnersPerDay;
+  $('adm-days').innerHTML = adminDays.length ? adminDays.map(d => `
     <tr>
-      <td style="color:var(--cream-40);font-family:'DM Mono',monospace;font-size:11px">${all.length - i}</td>
-      <td style="font-size:12px;color:var(--cream-40);font-family:'DM Mono',monospace;white-space:nowrap">${new Date(r.ts).toLocaleString('en-IN')}</td>
-      <td>${esc(r.name)}</td>
-      <td style="font-family:'DM Mono',monospace;font-size:12px">${esc(r.phone)}</td>
-      <td style="font-size:12px">${esc(r.r1)}</td>
-      <td style="font-size:12px">${esc(r.r2)}</td>
-      <td style="font-size:12px">${esc(r.r3)}</td>
-      <td>${r.won ? '<span class="badge-win">🏆 WON</span>' : '<span class="badge-lose">— miss</span>'}</td>
-      <td>${r.code ? `<span class="code-val">${esc(r.code)}</span>` : '<span style="color:var(--cream-20);font-size:11px">—</span>'}</td>
-    </tr>
-  `).join('');
+      <td style="font-family:'DM Mono',monospace">${esc(d.date)}${d.date === res.today ? ' <span class="badge-win">today</span>' : ''}</td>
+      <td>${d.players}</td>
+      <td>${d.spins}</td>
+      <td>${d.winners} / ${target}</td>
+      <td style="white-space:nowrap">
+        <button class="adm-btn plain" data-view="${esc(d.date)}">View</button>
+        <button class="adm-btn export" data-dl="${esc(d.date)}">⬇ Excel</button>
+      </td>
+    </tr>`).join('')
+    : `<tr><td colspan="5" class="adm-empty">No players yet.</td></tr>`;
 }
 
-function exportCSV() {
-  const all = getAll();
-  if (!all.length) { alert('No data to export.'); return; }
-  const header = ['#','Timestamp','Name','Phone','Reel1','Reel2','Reel3','Won','Code'];
-  const rows   = all.map((r,i) => [i+1, r.ts, `"${r.name}"`, r.phone, `"${r.r1}"`, `"${r.r2}"`, `"${r.r3}"`, r.won?'YES':'NO', r.code]);
-  const csv    = [header, ...rows].map(r => r.join(',')).join('\n');
-  const blob   = new Blob([csv], {type:'text/csv'});
-  const a      = document.createElement('a');
-  a.href       = URL.createObjectURL(blob);
-  a.download   = `starfill-spins-${new Date().toISOString().slice(0,10)}.csv`;
+async function refreshAdmin() {
+  adminMsg('Loading…');
+  Object.keys(exportCache).forEach(k => delete exportCache[k]);
+  try {
+    const res = await adminCall('admin_days');
+    renderDays(res);
+    const current = $('adm-day-title').dataset.date;
+    if (current) await viewDay(current);
+    adminMsg('');
+  } catch (err) {
+    if (err.message !== 'unauthorized') adminMsg(NETWORK_ERROR, true);
+  }
+}
+
+async function getExport(date) {
+  if (!exportCache[date]) exportCache[date] = await adminCall('admin_export', { date });
+  return exportCache[date];
+}
+
+async function viewDay(date) {
+  adminMsg('Loading ' + date + '…');
+  try {
+    const data = await getExport(date);
+    const p = data.participants;
+    const wins = p.filter(x => x.result === 'WON').length;
+    const title = $('adm-day-title');
+    title.textContent = 'Players — ' + date;
+    title.dataset.date = date;
+    $('adm-stats').innerHTML = `
+      <div class="adm-stat"><div class="adm-stat-n">${p.length}</div><div class="adm-stat-l">Players</div></div>
+      <div class="adm-stat"><div class="adm-stat-n">${p.reduce((n, x) => n + x.spins, 0)}</div><div class="adm-stat-l">Spins</div></div>
+      <div class="adm-stat"><div class="adm-stat-n">${wins}</div><div class="adm-stat-l">Winners</div></div>`;
+    $('adm-tbody').innerHTML = p.length ? p.map((r, i) => `
+      <tr>
+        <td style="color:var(--cream-40);font-family:'DM Mono',monospace;font-size:11px">${i + 1}</td>
+        <td>${esc(r.name)}</td>
+        <td style="font-family:'DM Mono',monospace;font-size:12px">${esc(r.phone)}</td>
+        <td style="font-size:12px;color:var(--cream-40);font-family:'DM Mono',monospace;white-space:nowrap">${esc(r.firstSeen.slice(11, 16))}</td>
+        <td>${r.spins}</td>
+        <td>${r.result === 'WON' ? '<span class="badge-win">🏆 WON</span>' : '<span class="badge-lose">— no win</span>'}</td>
+        <td style="font-size:12px">${esc(r.prize) || '—'}</td>
+        <td>${r.code ? `<span class="code-val">${esc(r.code)}</span>` : '—'}</td>
+      </tr>`).join('')
+      : `<tr><td colspan="8" class="adm-empty">No players on this day.</td></tr>`;
+    adminMsg('');
+  } catch (err) {
+    if (err.message !== 'unauthorized') adminMsg(NETWORK_ERROR, true);
+  }
+}
+
+// ── Excel export ──
+function loadXLSX() {
+  if (window.XLSX) return Promise.resolve(window.XLSX);
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = CFG.XLSX_LIB;
+    s.onload  = () => resolve(window.XLSX);
+    s.onerror = () => reject(new Error('xlsx library failed to load'));
+    document.head.appendChild(s);
+  });
+}
+
+function participantRows(data) {
+  return [
+    ['#', 'Name', 'Mobile', 'Checked in (IST)', 'Spins used', 'Result', 'Prize', 'Claim code', 'Last spin (IST)'],
+    ...data.participants.map((r, i) => [i + 1, r.name, r.phone, r.firstSeen, r.spins,
+      r.result === 'WON' ? 'WON' : 'No win', r.prize, r.code, r.lastSpin]),
+  ];
+}
+function spinRows(data) {
+  return [
+    ['#', 'Time (IST)', 'Name', 'Mobile', 'Spin #', 'Reel 1', 'Reel 2', 'Reel 3', 'Result', 'Prize', 'Claim code'],
+    ...data.spins.map((r, i) => [i + 1, r.time, r.name, r.phone, r.spinNo, r.reel1, r.reel2, r.reel3, r.result, r.prize, r.code]),
+  ];
+}
+
+function addSheet(XLSX, wb, rows, name) {
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = rows[0].map((_, c) => ({ wch: Math.min(40, Math.max(6, ...rows.map(r => String(r[c] ?? '').length + 2))) }));
+  XLSX.utils.book_append_sheet(wb, ws, name);
+}
+
+// Fallback when the Excel library can't load: CSV opens in Excel too
+function downloadCSV(rows, filename) {
+  const cell = v => {
+    let s = String(v ?? '');
+    if (/^[=+\-@]/.test(s)) s = "'" + s;  // no formula injection in Excel
+    return '"' + s.replace(/"/g, '""') + '"';
+  };
+  const csv  = '﻿' + rows.map(r => r.map(cell).join(',')).join('\r\n');
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = filename;
   a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
 
-function clearAll() {
-  if (!confirm('Delete all spin records? This cannot be undone.')) return;
-  localStorage.removeItem(LS_KEY);
-  renderAdmin();
+async function downloadExcel(dates, btn) {
+  if (!dates.length) { adminMsg('No data to export yet.'); return; }
+  setBusy(btn, true, 'Preparing…');
+  try {
+    const exports = [];
+    for (const d of dates) exports.push(await getExport(d));
+    const base = dates.length === 1 ? `STARFILL-LuckySpin-${dates[0]}` : 'STARFILL-LuckySpin-all-days';
+    try {
+      const XLSX = await loadXLSX();
+      const wb = XLSX.utils.book_new();
+      for (const data of exports) {
+        addSheet(XLSX, wb, participantRows(data), `${data.date} Players`);
+        addSheet(XLSX, wb, spinRows(data), `${data.date} Spins`);
+      }
+      XLSX.writeFile(wb, base + '.xlsx');
+      adminMsg('');
+    } catch {
+      const rows = exports.flatMap((data, i) => (i ? [[], [data.date]] : [[data.date]]).concat(participantRows(data)));
+      downloadCSV(rows, base + '.csv');
+      adminMsg('Excel library unavailable — downloaded a CSV instead (opens in Excel).');
+    }
+  } catch (err) {
+    if (err.message !== 'unauthorized') adminMsg(NETWORK_ERROR, true);
+  } finally {
+    setBusy(btn, false);
+  }
+}
+
+function initAdmin() {
+  $('screen-register').classList.add('hidden');
+  $('admin-panel').classList.remove('hidden');
+  if (CFG.SHEET_URL) { $('adm-sheet-link').href = CFG.SHEET_URL; $('adm-sheet-link').classList.remove('hidden'); }
+
+  $('adm-login').addEventListener('submit', adminLogin);
+  $('adm-logout').addEventListener('click', () => adminLogout());
+  $('adm-refresh').addEventListener('click', refreshAdmin);
+  $('adm-dl-all').addEventListener('click', e => downloadExcel(adminDays.map(d => d.date).sort(), e.currentTarget));
+  $('adm-days').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.dataset.view) viewDay(b.dataset.view);
+    if (b.dataset.dl)   downloadExcel([b.dataset.dl], b);
+  });
+
+  const saved = ssGet('sf_admin_key');
+  if (saved) { $('adm-key').value = saved; $('adm-login').requestSubmit(); }
+  else $('adm-key').focus();
 }
 
 // ─────────────────────────────────────────────
 // CONFETTI
 // ─────────────────────────────────────────────
 function launchConfetti() {
-  const canvas = document.getElementById('confetti');
+  const canvas = $('confetti');
   const ctx    = canvas.getContext('2d');
   canvas.width  = window.innerWidth;
   canvas.height = window.innerHeight;
@@ -1308,15 +1495,20 @@ function launchConfetti() {
 }
 
 // ─────────────────────────────────────────────
-// INIT — check for admin mode
+// INIT
 // ─────────────────────────────────────────────
 (function init() {
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('admin') === CFG.ADMIN_KEY) {
-    document.getElementById('screen-register').classList.add('hidden');
-    document.getElementById('admin-panel').classList.remove('hidden');
-    renderAdmin();
-  }
+  if (new URLSearchParams(location.search).has('admin')) { initAdmin(); return; }
+  $('reg-form').addEventListener('submit', onRegister);
+  $('btn-spin').addEventListener('click', doSpin);
+  $('btn-again').addEventListener('click', closeOverlay);
+  $('btn-done').addEventListener('click', resetToStart);
+  $('btn-exit').addEventListener('click', () => {
+    if (spinning) return;
+    if (spinsLeft > 0 && !confirm(`You still have ${spinsLeft} spin${spinsLeft > 1 ? 's' : ''} left. Exit anyway? (You can come back with the same number today.)`)) return;
+    resetToStart();
+  });
+  window.addEventListener('resize', () => { if (!spinning && userPhone) [0, 1, 2].forEach(parkStrip); });
 })();
 </script>
 </body>
