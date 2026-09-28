@@ -644,6 +644,12 @@
     .adm-verify-result:empty { display: none; }
     .adm-verify-result.ok  { padding: 10px 14px; background: rgba(74,222,128,0.08); border: 1px solid rgba(74,222,128,0.35); }
     .adm-verify-result.bad { padding: 10px 14px; background: rgba(220,60,60,0.08); border: 1px solid rgba(220,60,60,0.35); color: #f5a3a3; }
+    .adm-verify-result.warn { padding: 10px 14px; background: rgba(201,148,58,0.08); border: 1px solid rgba(201,148,58,0.4); }
+    .adm-check { margin-top: 8px; font-size: 14px; color: var(--cream-70); }
+    .adm-code-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .adm-btn.give { background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.4); color: #4ade80; }
+    .adm-btn.void { background: rgba(220,60,60,0.08); border: 1px solid rgba(220,60,60,0.35); color: #f88; }
+    .badge-void { color: #f88; font-size: 11px; font-family: 'DM Mono', monospace; }
 
     .adm-stats {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
@@ -786,7 +792,7 @@
       <div class="disc-label">You Have Won</div>
       <div class="disc-product-name" id="disc-product-name">—</div>
       <div class="disc-code"><span class="disc-code-label">Claim code</span><span id="disc-code">—</span></div>
-      <div class="disc-hint">Show this screen at the STARFILL booth to claim your prize</div>
+      <div class="disc-hint" id="disc-hint">Show this screen at the STARFILL booth to claim your prize</div>
     </div>
 
     <button class="btn-whatsapp hidden" id="btn-share">
@@ -820,6 +826,7 @@
         <button class="adm-btn plain" id="adm-refresh">↻ Refresh</button>
         <button class="adm-btn export" id="adm-dl-all">⬇ Excel — all days</button>
         <a class="adm-btn plain hidden" id="adm-sheet-link" target="_blank" rel="noopener" style="text-decoration:none">Open Google Sheet ↗</a>
+        <button class="adm-btn plain" id="adm-kiosk" title="The booth tablet can check in many different numbers back-to-back">Mark this device as booth tablet</button>
         <button class="adm-btn plain" id="adm-logout">Sign out</button>
       </div>
     </div>
@@ -924,6 +931,17 @@ function fmtDateTime(ms) {
   return new Date(ms).toLocaleString('en-IN', {
     timeZone: CFG.TIMEZONE, day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit',
   });
+}
+
+// Random per-browser ID so the server can slow down one phone cycling through numbers
+function deviceId() {
+  try {
+    let id = localStorage.getItem('sf_device');
+    if (!id) { id = newId(); localStorage.setItem('sf_device', id); }
+    return id;
+  } catch {
+    return (window.__sfDevice = window.__sfDevice || newId());
+  }
 }
 
 function ssGet(k)    { try { return sessionStorage.getItem(k); } catch { return null; } }
@@ -1144,6 +1162,8 @@ function showResult(res) {
     descEl.textContent  = `Congratulations ${drName(userName)} — all three match!`;
     $('disc-product-name').textContent = 'FREE ' + res.prize;
     $('disc-code').textContent = res.code;
+    $('disc-hint').textContent = `To collect: tap Claim on WhatsApp from the phone with number ${userPhone}, ` +
+                                 `then show this screen at the STARFILL booth. Prizes are only given to the owner of this number.`;
     $('btn-share-label').textContent = 'Claim on WhatsApp';
     shareBtn.onclick = () => openWhatsApp(
       `Hi! I just won a FREE ${res.prize} on the STARFILL Lucky Spin 🎉\n` +
@@ -1219,7 +1239,7 @@ async function onRegister(e) {
   setBusy(btn, true, 'CHECKING…');
   let res;
   try {
-    res = await api('register', { name, phone });
+    res = await api('register', { name, phone, deviceId: deviceId() });
   } catch {
     errEl.textContent = NETWORK_ERROR;
     return;
@@ -1227,6 +1247,11 @@ async function onRegister(e) {
     setBusy(btn, false);
   }
 
+  if (!res.ok && res.error === 'slow_down') {
+    const m = Math.floor(res.waitSeconds / 60), sec = res.waitSeconds % 60;
+    errEl.textContent = `A different mobile number was just used on this phone. Please try again in ${m ? m + ' min ' : ''}${sec} sec.`;
+    return;
+  }
   if (!res.ok) { errEl.textContent = errorText(res.error); return; }
   if (res.status === 'won_locked') {
     errEl.textContent = `This mobile number has already won a prize 🎉 It can play again after ${fmtDateTime(res.lockedUntil)}.`;
@@ -1277,7 +1302,7 @@ async function adminLogin(e) {
   const btn = $('adm-login-btn');
   setBusy(btn, true, 'CHECKING…');
   try {
-    const res = await api('admin_days', { adminKey: key });
+    const res = await api('admin_days', { adminKey: key, deviceId: deviceId() });
     if (!res.ok) { $('adm-login-error').textContent = res.error === 'unauthorized' ? 'Wrong admin key.' : errorText(res.error); return; }
     adminKey = key;
     ssSet('sf_admin_key', key);
@@ -1308,6 +1333,7 @@ function showAdminMain(daysRes) {
 
 function renderDays(res) {
   adminDays = res.days;
+  renderKiosk(res.kiosk);
   const target = res.winnersPerDay;
   $('adm-days').innerHTML = adminDays.length ? adminDays.map(d => `
     <tr>
@@ -1327,7 +1353,7 @@ async function refreshAdmin() {
   adminMsg('Loading…');
   Object.keys(exportCache).forEach(k => delete exportCache[k]);
   try {
-    const res = await adminCall('admin_days');
+    const res = await adminCall('admin_days', { deviceId: deviceId() });
     renderDays(res);
     const current = $('adm-day-title').dataset.date;
     if (current) await viewDay(current);
@@ -1362,7 +1388,8 @@ async function viewDay(date) {
         <td style="font-family:'DM Mono',monospace;font-size:12px">${esc(r.phone)}</td>
         <td style="font-size:12px;color:var(--cream-40);font-family:'DM Mono',monospace;white-space:nowrap">${esc(r.firstSeen.slice(11, 16))}</td>
         <td>${r.spins}</td>
-        <td>${r.result === 'WON' ? '<span class="badge-win">🏆 WON</span>' : '<span class="badge-lose">— no win</span>'}</td>
+        <td>${r.result === 'WON' ? `<span class="badge-win">🏆 WON${r.codeStatus === 'given' ? ' · given' : ''}</span>`
+             : r.result === 'VOID' ? '<span class="badge-void">✖ VOID</span>' : '<span class="badge-lose">— no win</span>'}</td>
         <td style="font-size:12px">${esc(r.prize) || '—'}</td>
         <td>${r.code ? `<span class="code-val">${esc(r.code)}</span>` : '—'}</td>
       </tr>`).join('')
@@ -1389,14 +1416,15 @@ function participantRows(data) {
   return [
     ['#', 'Name', 'Mobile', 'Checked in (IST)', 'Spins used', 'Result', 'Prize', 'Claim code', 'Last spin (IST)'],
     ...data.participants.map((r, i) => [i + 1, r.name, r.phone, r.firstSeen, r.spins,
-      r.result === 'WON' ? 'WON' : 'No win', r.prize, r.code, r.lastSpin]),
+      r.result === 'WON' ? 'WON' : r.result === 'VOID' ? 'VOID' : 'No win', r.prize, r.code, r.lastSpin]),
   ];
 }
 function winnerRows(data) {
   return [
-    ['#', 'Name', 'Mobile', 'Prize', 'Claim code', 'Won at (IST)'],
-    ...data.participants.filter(r => r.result === 'WON')
-      .map((r, i) => [i + 1, r.name, r.phone, r.prize, r.code, r.lastSpin]),
+    ['#', 'Name', 'Mobile', 'Prize', 'Claim code', 'Won at (IST)', 'Status', 'Given at (IST)'],
+    ...data.participants.filter(r => r.result === 'WON' || r.result === 'VOID')
+      .map((r, i) => [i + 1, r.name, r.phone, r.prize, r.code, r.lastSpin,
+        r.result === 'VOID' ? 'VOID (not verified)' : r.codeStatus === 'given' ? 'Prize given' : 'Not yet given', r.givenAt]),
   ];
 }
 function spinRows(data) {
@@ -1457,7 +1485,7 @@ async function downloadExcel(dates, btn) {
 }
 
 async function verifyCode(e) {
-  e.preventDefault();
+  if (e) e.preventDefault();
   const out  = $('adm-verify-result');
   const code = $('adm-code').value.trim();
   if (!code) return;
@@ -1466,24 +1494,87 @@ async function verifyCode(e) {
   out.className = 'adm-verify-result';
   out.textContent = '';
   try {
-    const r = await adminCall('admin_verify', { code });
-    if (r.valid) {
-      out.className = 'adm-verify-result ok';
-      out.innerHTML = `✅ <strong>Valid</strong> — ${esc(r.code)}<br>${esc(drName(r.name))} · ${esc(r.phone)}<br>` +
-                      `Prize: <strong>${esc(r.prize)}</strong><br><span style="color:var(--cream-40)">Won ${esc(r.issued)} IST</span>`;
-    } else {
-      out.className = 'adm-verify-result bad';
-      out.textContent = r.test
-        ? `⚠️ ${r.code} is a TEST code (${r.prize}) — not a real prize.`
-        : r.reason === 'not_issued'
-          ? `❌ ${r.code} was never issued. Do not give a prize.`
-          : `❌ ${r.code} is not a valid STARFILL code (check for typos).`;
-    }
+    renderVerify(await adminCall('admin_verify', { code }));
   } catch (err) {
     if (err.message !== 'unauthorized') { out.className = 'adm-verify-result bad'; out.textContent = NETWORK_ERROR; }
   } finally {
     setBusy(btn, false);
   }
+}
+
+function renderVerify(r) {
+  const out = $('adm-verify-result');
+  if (r.test) {
+    out.className = 'adm-verify-result bad';
+    out.textContent = `⚠️ ${r.code} is a TEST code (${r.prize}) — not a real prize.`;
+    return;
+  }
+  if (r.reason) {
+    out.className = 'adm-verify-result bad';
+    out.textContent = r.reason === 'not_issued'
+      ? `❌ ${r.code} was never issued. Do not give a prize.`
+      : `❌ ${r.code} is not a valid STARFILL code (check for typos).`;
+    return;
+  }
+  const who = `${esc(drName(r.name))} · <strong>${esc(r.phone)}</strong><br>Prize: <strong>${esc(r.prize)}</strong>` +
+              `<br><span style="color:var(--cream-40)">Won ${esc(r.issued)} IST</span>`;
+  if (r.status === 'given') {
+    out.className = 'adm-verify-result warn';
+    out.innerHTML = `⚠️ <strong>Already given</strong> at ${esc(r.givenAt)} IST — do not give again.<br>${who}`;
+  } else if (r.status === 'void') {
+    out.className = 'adm-verify-result bad';
+    out.innerHTML = `❌ <strong>Voided</strong> at ${esc(r.voidedAt)} IST — not a valid prize.<br>${who}`;
+  } else {
+    out.className = 'adm-verify-result ok';
+    out.innerHTML = `✅ <strong>Valid</strong> — ${esc(r.code)}<br>${who}
+      <div class="adm-check">Before handing over, check the number is really theirs: the WhatsApp claim must come
+      <strong>from ${esc(r.phone)}</strong>, or give ${esc(r.phone)} a missed call and see their phone ring.</div>
+      <div class="adm-code-actions">
+        <button class="adm-btn give" data-code-status="given">✔ Verified — mark prize given</button>
+        <button class="adm-btn void" data-code-status="void">✖ Not their number — void</button>
+      </div>`;
+    out.dataset.code = r.code;
+  }
+}
+
+async function setCodeStatus(status, btn) {
+  const code = $('adm-verify-result').dataset.code;
+  if (status === 'void' && !confirm(`Void ${code}? The prize goes back into that day's pool for another player.`)) return;
+  setBusy(btn, true, '…');
+  try {
+    const res = await api('admin_code', { adminKey, code, status });
+    if (!res.ok && res.error === 'unauthorized') return adminLogout('Admin key rejected. Please sign in again.');
+    if (!res.ok) { adminMsg('Could not update: ' + res.error.replace('_', ' '), true); return; }
+    Object.keys(exportCache).forEach(k => delete exportCache[k]);
+    await verifyCode();
+    refreshAdmin();
+  } catch {
+    adminMsg(NETWORK_ERROR, true);
+  } finally {
+    if (btn.isConnected) setBusy(btn, false);
+  }
+}
+
+async function toggleKiosk() {
+  const btn = $('adm-kiosk');
+  const on  = btn.dataset.on !== '1';
+  if (on && !confirm('Mark THIS device as the booth tablet? It will be allowed to check in many different mobile numbers back-to-back. Only do this on the tablet your staff hold.')) return;
+  setBusy(btn, true, '…');
+  try {
+    const res = await adminCall('admin_kiosk', { deviceId: deviceId(), on });
+    setBusy(btn, false);
+    renderKiosk(res.kiosk);
+  } catch (err) {
+    setBusy(btn, false);
+    if (err.message !== 'unauthorized') adminMsg(NETWORK_ERROR, true);
+  }
+}
+
+function renderKiosk(on) {
+  const btn = $('adm-kiosk');
+  btn.dataset.on = on ? '1' : '0';
+  btn.textContent = on ? '✓ Booth tablet (tap to undo)' : 'Mark this device as booth tablet';
+  btn.classList.toggle('active', !!on);
 }
 
 function initAdmin() {
@@ -1495,6 +1586,11 @@ function initAdmin() {
   $('adm-logout').addEventListener('click', () => adminLogout());
   $('adm-refresh').addEventListener('click', refreshAdmin);
   $('adm-verify').addEventListener('submit', verifyCode);
+  $('adm-verify-result').addEventListener('click', e => {
+    const b = e.target.closest('button[data-code-status]');
+    if (b) setCodeStatus(b.dataset.codeStatus, b);
+  });
+  $('adm-kiosk').addEventListener('click', toggleKiosk);
   $('adm-dl-all').addEventListener('click', e => downloadExcel(adminDays.map(d => d.date).sort(), e.currentTarget));
   $('adm-days').addEventListener('click', e => {
     const b = e.target.closest('button');

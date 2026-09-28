@@ -14,6 +14,7 @@ second device:
 | Winners spread over the first ~120 spins (~42 visitors) | `PRIZE_WINDOW_SPINS` |
 | Any prize still left after 16:00 IST goes to the next spin | `LAST_CALL_TIME` (set about 1 hour before the booth closes) |
 | Prize mix when someone wins: PLUS 50%, DEEP+ 30%, IMPLANT+ 20% | `SYMBOLS[].weight` |
+| A phone must wait 2 min before checking in a *different* number (booth tablet exempt) | `NEW_NUMBER_COOLDOWN_SECONDS` |
 
 Every check-in and spin is written to the Google Sheet (tabs **Registrations**
 and **Spins**). The admin page downloads a per-day Excel file.
@@ -62,8 +63,22 @@ all spin counters and archives the test tabs.
   (e.g. `1 / 2`), with **⬇ Excel** for each day and **Excel — all days**.
   Each file has a *Players* sheet (name, mobile, spins used, result, prize,
   claim code) and a *Spins* sheet (every spin).
-- **Verifying a winner:** the winner's screen shows a claim code such as
-  `SFI-48213`. It must match the code in the admin page or Sheet for that mobile.
+- **Handing over a prize (do this every time):**
+  1. The winner shows a claim code such as `SFI-7KQ4XM9`. Type it into
+     **Verify a claim code** on the admin page.
+  2. Check the number is really theirs, because nobody verifies numbers at check-in:
+     - the WhatsApp claim reached the office **from that same number**, or
+     - give that number a missed call and watch the winner's phone ring.
+  3. If it matches, tap **✔ Verified — mark prize given**. The code can't be
+     used again.
+  4. If it doesn't match, tap **✖ Not their number — void**. The prize goes back
+     into that day's pool, so the day still ends with 2 real winners
+     (usually the very next spin wins).
+- **Booth tablet:** open `/?admin` **on the tablet itself**, sign in, and tap
+  **Mark this device as booth tablet**. Other phones must wait 2 minutes
+  before checking in a different number (to stop people cycling fake numbers).
+  The booth tablet is exempt, so visitors can play one after another.
+  Sign out of admin on the tablet afterwards.
 - **WhatsApp:** winners tap **Claim on WhatsApp**, which sends their name,
   mobile and claim code to the office number (+91 99872 64974). Everyone else
   gets a **Chat with us on WhatsApp** button at the end.

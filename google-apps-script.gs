@@ -34,6 +34,10 @@ var CONFIG = {
   LAST_CALL_TIME: '16:00',
   WIN_LOCK_HOURS: 24,
   RESET_SPINS_DAILY: true,  // false = 3 spins for the whole event
+  // Anti-cheat: after a mobile number checks in on a phone, that phone must
+  // wait this long before checking in a DIFFERENT number. Devices marked as
+  // the booth tablet in the admin panel are exempt.
+  NEW_NUMBER_COOLDOWN_SECONDS: 120,
 };
 
 // Which prize a winner gets keeps the original 5 : 3 : 2 distribution.
@@ -64,6 +68,8 @@ function doPost(e) {
       case 'admin_days':   return json_(adminDays_(req));
       case 'admin_export': return json_(adminExport_(req));
       case 'admin_verify': return json_(adminVerify_(req));
+      case 'admin_code':   return json_(withLock_(function () { return adminCode_(req); }));
+      case 'admin_kiosk':  return json_(adminKiosk_(req));
       default:             return json_({ ok: false, error: 'unknown_action' });
     }
   } catch (err) {
@@ -87,7 +93,7 @@ function doGet() {
 function resetAllData() {
   var p = props_();
   Object.keys(p.getProperties()).forEach(function (k) {
-    if (/^(u|d|code):/.test(k)) p.deleteProperty(k);
+    if (/^(u|d|code|dev):/.test(k)) p.deleteProperty(k);  // booth-tablet marks (kiosk:) are kept
   });
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var suffix = ' (archived ' + stamp_(Date.now()) + ')';
@@ -110,6 +116,15 @@ function register_(req) {
   var today = dayKey_(now);
   var u = getUser_(phone) || {};
 
+  // Same phone switching to a different number too quickly → slow down
+  var deviceId = cleanDeviceId_(req.deviceId);
+  var isKiosk = !!props_().getProperty('kiosk:' + deviceId);
+  var dev = isKiosk ? null : JSON.parse(props_().getProperty('dev:' + deviceId) || 'null');
+  var cooldownMs = CONFIG.NEW_NUMBER_COOLDOWN_SECONDS * 1000;
+  if (dev && dev.phone !== phone && now - dev.at < cooldownMs) {
+    return { ok: false, error: 'slow_down', waitSeconds: Math.ceil((dev.at + cooldownMs - now) / 1000) };
+  }
+
   if (u.lockedUntil && now < u.lockedUntil) {
     return { ok: true, status: 'won_locked', name: u.name, lockedUntil: u.lockedUntil };
   }
@@ -122,6 +137,9 @@ function register_(req) {
   }
   if (firstVisitToday || !u.name) u.name = name;  // first name entered each day sticks
   setUser_(phone, u);
+  if (!isKiosk && (!dev || dev.phone !== phone)) {
+    props_().setProperty('dev:' + deviceId, JSON.stringify({ phone: phone, at: now }));
+  }
 
   if (firstVisitToday) {
     sheet_('Registrations', REG_HEADERS).appendRow([text_(stamp_(now)), text_(today), safeCell_(name), text_(phone)]);
@@ -178,7 +196,8 @@ function spin_(req) {
   if (won) {
     code = newClaimCode_(prize.prefix);
     props_().setProperty('code:' + code, JSON.stringify({
-      name: u.name, phone: phone, prize: prize.label, issued: stamp_(now), test: !!forced,
+      name: u.name, phone: phone, prize: prize.label, issued: stamp_(now), day: today,
+      test: !!forced, status: 'issued',
     }));
   }
   if (!forced) {
@@ -245,6 +264,7 @@ function losingReels_() {
 // ─────────────────────────────────────────────
 function adminDays_(req) {
   if (!isAdmin_(req.adminKey)) return { ok: false, error: 'unauthorized' };
+  var kiosk = !!props_().getProperty('kiosk:' + cleanDeviceId_(req.deviceId));
   var days = {};
   rows_('Registrations').forEach(function (r) {
     var d = String(r[1]);
@@ -259,7 +279,7 @@ function adminDays_(req) {
     if (r[8] === 'WON') days[d].winners += 1;
   });
   var list = Object.keys(days).sort().reverse().map(function (k) { return days[k]; });
-  return { ok: true, days: list, today: dayKey_(Date.now()), winnersPerDay: CONFIG.WINNERS_PER_DAY };
+  return { ok: true, days: list, today: dayKey_(Date.now()), winnersPerDay: CONFIG.WINNERS_PER_DAY, kiosk: kiosk };
 }
 
 // Staff check a code shown on a winner's phone
@@ -270,8 +290,60 @@ function adminVerify_(req) {
   var raw = props_().getProperty('code:' + code);
   if (!raw) return { ok: true, valid: false, code: code, reason: 'not_issued' };
   var info = JSON.parse(raw);
-  return { ok: true, valid: !info.test, test: !!info.test, code: code,
+  return { ok: true, valid: !info.test && info.status !== 'void', test: !!info.test, code: code,
+           status: info.status || 'issued', givenAt: info.givenAt || '', voidedAt: info.voidedAt || '',
            name: info.name, phone: info.phone, prize: info.prize, issued: info.issued };
+}
+
+// Staff record the outcome of a claim:
+//   given — prize handed over (a code can only be given once)
+//   void  — winner couldn't prove the number is theirs; the prize goes back
+//           into that day's pool so the day still ends with exactly 2 winners
+function adminCode_(req) {
+  if (!isAdmin_(req.adminKey)) return { ok: false, error: 'unauthorized' };
+  var code = normalizeCode_(req.code);
+  var raw = props_().getProperty('code:' + code);
+  if (!raw) return { ok: false, error: 'not_issued' };
+  var info = JSON.parse(raw);
+  var status = info.status || 'issued';
+  if (info.test) return { ok: false, error: 'test_code' };
+  if (status !== 'issued') return { ok: false, error: 'already_' + status };
+
+  var now = Date.now();
+  if (req.status === 'given') {
+    info.status = 'given';
+    info.givenAt = stamp_(now);
+  } else if (req.status === 'void') {
+    info.status = 'void';
+    info.voidedAt = stamp_(now);
+    var day = info.day || String(info.issued).slice(0, 10);
+    var stats = getDay_(day);
+    stats.wins = Math.max(0, stats.wins - 1);
+    setDay_(day, stats);
+    markSpinVoid_(code);
+  } else {
+    return { ok: false, error: 'bad_status' };
+  }
+  props_().setProperty('code:' + code, JSON.stringify(info));
+  return { ok: true, code: code, status: info.status };
+}
+
+function markSpinVoid_(code) {
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Spins');
+  var rows = rows_('Spins');
+  for (var i = rows.length - 1; i >= 0; i--) {
+    if (rows[i][10] === code) { sh.getRange(i + 2, 9).setValue('VOID'); return; }
+  }
+}
+
+// Mark / unmark the device the admin is using as the booth tablet
+function adminKiosk_(req) {
+  if (!isAdmin_(req.adminKey)) return { ok: false, error: 'unauthorized' };
+  var id = cleanDeviceId_(req.deviceId);
+  if (id === 'anon') return { ok: false, error: 'no_device_id' };
+  if (req.on) props_().setProperty('kiosk:' + id, stamp_(Date.now()));
+  else props_().deleteProperty('kiosk:' + id);
+  return { ok: true, kiosk: !!req.on };
 }
 
 function adminExport_(req) {
@@ -308,7 +380,11 @@ function adminExport_(req) {
     p.name = s.name;
     p.spins += 1;
     p.lastSpin = s.time;
-    if (s.result === 'WON') { p.result = 'WON'; p.prize = s.prize; p.code = s.code; }
+    if (s.result === 'WON' || s.result === 'VOID') {
+      var info = JSON.parse(props_().getProperty('code:' + s.code) || '{}');
+      p.result = s.result; p.prize = s.prize; p.code = s.code;
+      p.codeStatus = info.status || 'issued'; p.givenAt = info.givenAt || '';
+    }
   });
 
   return { ok: true, date: date, participants: order.map(function (k) { return byPhone[k]; }), spins: spins };
@@ -369,6 +445,11 @@ function normalizePhone_(raw) {
   if (d.length === 12 && d.indexOf('91') === 0) d = d.slice(2);
   else if (d.length === 11 && d.charAt(0) === '0') d = d.slice(1);
   return /^[6-9]\d{9}$/.test(d) ? d : null;
+}
+
+function cleanDeviceId_(raw) {
+  var id = String(raw || '').replace(/[^A-Za-z0-9-]/g, '').slice(0, 64);
+  return id || 'anon';
 }
 
 function cleanName_(raw) {
